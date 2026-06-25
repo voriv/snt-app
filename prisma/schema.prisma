@@ -1,0 +1,421 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum PlotStatus {
+  ACTIVE
+  INACTIVE
+  ABANDONED
+}
+
+enum MembershipRole {
+  OWNER
+  CO_OWNER
+  TENANT
+  FAMILY
+}
+
+enum ChargeType {
+  MEMBERSHIP_FEE
+  TARGET_FEE
+  ELECTRICITY
+  WATER
+  LAND_TAX
+  OTHER
+}
+
+enum ChargeStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  SBERPAY
+  OTHER
+}
+
+enum DocCategory {
+  CHARTER
+  PROTOCOL
+  RULE
+  REPORT
+  CONTRACT
+  INVOICE
+  OTHER
+}
+
+enum VoteType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
+enum VoteStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum ChatType {
+  PRIVATE
+  GROUP
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  VOTE_STARTED
+  VOTE_ENDED
+  CHARGE_CREATED
+  PAYMENT_RECEIVED
+  DOCUMENT_UPLOADED
+  CHAT_MESSAGE
+  FORUM_REPLY
+  SYSTEM
+}
+
+model User {
+  id             String      @id @default(cuid())
+  email          String      @unique
+  passwordHash   String
+  role           UserRole    @default(MEMBER)
+  name           String?
+  phone          String?
+  avatarUrl      String?
+  isActive       Boolean     @default(true)
+  emailVerified DateTime?
+  resetToken     String?     @unique
+  resetTokenExp  DateTime?
+
+  member         Member?
+  notifications  Notification[]
+  forumPosts     ForumPost[]
+  chatMessages   ChatMessage[]
+  voteResponses  VoteResponse[]
+  uploadedDocs   Document[]      @relation("UploadedDocs")
+  authoredAnn    Announcement[]  @relation("AuthoredAnn")
+  chatParticipants ChatParticipant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Member {
+  id              String            @id @default(cuid())
+  userId          String            @unique
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  surname         String
+  firstName       String
+  patronymic      String?
+  address         String?
+  snn             String?
+
+  plotMemberships PlotMembership[]
+  payments        Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("members")
+}
+
+model Plot {
+  id            String      @id @default(cuid())
+  number        String      @unique
+  area          Float
+  address       String?
+  cadastralNum  String?
+  status        PlotStatus  @default(ACTIVE)
+
+  plotMemberships PlotMembership[]
+  charges         Charge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("plots")
+}
+
+model PlotMembership {
+  id       String         @id @default(cuid())
+  plotId   String
+  memberId String
+  role     MembershipRole @default(OWNER)
+  share    Float?
+  since    DateTime       @default(now())
+  until    DateTime?
+
+  plot   Plot   @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([plotId, memberId, since])
+  @@map("plot_memberships")
+}
+
+model Charge {
+  id          String       @id @default(cuid())
+  plotId      String
+  plot        Plot         @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  type        ChargeType
+  amount      Decimal      @db.Decimal(12, 2)
+  description String?
+  period      String
+  dueDate     DateTime?
+  status      ChargeStatus @default(PENDING)
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([plotId, period])
+  @@index([status])
+  @@map("charges")
+}
+
+model Payment {
+  id         String       @id @default(cuid())
+  memberId   String
+  member     Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  chargeId   String?
+  charge     Charge?       @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+  amount     Decimal      @db.Decimal(12, 2)
+  method     PaymentMethod
+  receiptNum String?
+  receiptUrl String?
+  note       String?
+  paidAt     DateTime     @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId])
+  @@index([chargeId])
+  @@map("payments")
+}
+
+model File {
+  id           String    @id @default(cuid())
+  originalName String
+  mimeType     String
+  size         Int
+  content      Bytes     @db.Bytes
+  isDeleted    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  documents    Document[]
+
+  @@map("files")
+}
+
+model Document {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  category     DocCategory
+  isPublic     Boolean    @default(false)
+  uploadedById String
+  uploadedBy   User       @relation("UploadedDocs", fields: [uploadedById], references: [id])
+  fileId       String
+  file         File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublic])
+  @@map("documents")
+}
+
+model Announcement {
+  id       String  @id @default(cuid())
+  title    String
+  content  String
+  isPinned Boolean @default(false)
+  isPublic Boolean @default(false)
+  authorId String
+  author   User    @relation("AuthoredAnn", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPinned])
+  @@index([isPublic])
+  @@map("announcements")
+}
+
+model Vote {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  type        VoteType
+  status      VoteStatus @default(DRAFT)
+  isAnonymous Boolean    @default(false)
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdById String
+
+  options   VoteOption[]
+  responses VoteResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("votes")
+}
+
+model VoteOption {
+  id        String   @id @default(cuid())
+  voteId    String
+  vote      Vote     @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  text      String
+  sortOrder Int      @default(0)
+
+  responses VoteResponse[]
+
+  @@index([voteId])
+  @@map("vote_options")
+}
+
+model VoteResponse {
+  id       String     @id @default(cuid())
+  voteId   String
+  vote     Vote       @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  optionId String
+  option   VoteOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, voteId, optionId])
+  @@index([voteId])
+  @@index([userId, voteId])
+  @@map("vote_responses")
+}
+
+model ForumTopic {
+  id       String  @id @default(cuid())
+  title    String
+  isPinned Boolean @default(false)
+  isLocked Boolean @default(false)
+  authorId String
+
+  posts ForumPost[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPinned])
+  @@map("forum_topics")
+}
+
+model ForumPost {
+  id       String     @id @default(cuid())
+  topicId  String
+  topic    ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content  String
+  parentId String?    // Для вложенных ответов
+
+  parent ForumPost?   @relation("ForumPostReplies", fields: [parentId], references: [id])
+  replies ForumPost[] @relation("ForumPostReplies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([topicId])
+  @@map("forum_posts")
+}
+
+model Chat {
+  id           String             @id @default(cuid())
+  type         ChatType           @default(PRIVATE)
+  name         String?            // Для групповых чатов
+
+  messages     ChatMessage[]
+  participants ChatParticipant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("chats")
+}
+
+model ChatParticipant {
+  id         String  @id @default(cuid())
+  chatId     String
+  userId     String
+  chat       Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime?
+
+  @@unique([chatId, userId])
+  @@map("chat_participants")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
+  @@map("chat_messages")
+}
+
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type    NotificationType
+  title   String
+  content String?
+  link    String?          // URL для перехода
+  isRead  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model InfoPage {
+  id       String @id @default(cuid())
+  slug     String @unique
+  title    String
+  content  String
+  isPublic Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("info_pages")
+}
