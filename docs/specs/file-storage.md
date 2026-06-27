@@ -2,16 +2,6 @@
 
 ## Статус: На обсуждении
 
-## Метаданные
-
-| Параметр | Значение |
-|----------|----------|
-| Версия | 0.1.0 |
-| Дата создания | 2026-06-24 |
-| Автор | Architect |
-| Связанные документы | [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md), [`repository-component-requirements.md`](components/repositories/repository-component-requirements.md) |
-| Состояние | На обсуждении |
-
 ---
 
 ## 0. Общие положения
@@ -41,23 +31,13 @@
 
 ### 1.1 Сущность `File` (в PostgreSQL)
 
-```prisma
-model File {
-  id            String   @id @default(cuid())
-  originalName  String   @default("unnamed")
-  mimeType      String
-  size          Int      // Размер в байтах
-  content       bytea    // Бинарные данные файла
-  isDeleted     Boolean  @default(false)  // Мягкое удаление
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([mimeType])
-  @@index([createdAt])
-  @@map("files")
-}
-```
+> 📄 Полный Prisma Schema: [`prisma/schema.prisma`](../../prisma/schema.prisma)
+
+**Ключевые поля:** `id` (cuid), `originalName`, `mimeType`, `size` (bytes), `content` (bytea), `isDeleted` (мягкое удаление), `createdAt`, `updatedAt`
+
+**Индексы:** `mimeType`, `createdAt`
+
+**Таблица:** `files` (`@@map("files")`)
 
 **File Storage — обобщённое хранилище.** Категоризация файлов выполняется на уровне сервиса, который хранит ссылку на файл. Например:
 - Сервис `Document` хранит `fileId` в модели `Document`
@@ -66,38 +46,12 @@ model File {
 
 ### 1.2 Интеграция с существующими моделями
 
-**Пример: аватар пользователя**
+Все модели связаны через `@relation` с `File`:
+- **User:** `avatarFileId` → `File` (1:1, опционально)
+- **Document:** `fileId` → `File` (1:1, обязательно)
+- **Payment:** `receiptFileId` → `File` (1:1, опционально)
 
-```prisma
-model User {
-  id             String   @id @default(cuid())
-  avatarFileId   String?  @unique
-  avatarFile     File?    @relation("UserAvatars", fields: [avatarFileId], references: [id])
-  // ... другие поля
-}
-```
-
-**Пример: документ**
-
-```prisma
-model Document {
-  id          String @id @default(cuid())
-  fileId      String @unique
-  file        File   @relation("DocumentFiles", fields: [fileId], references: [id])
-  // ... другие поля
-}
-```
-
-**Пример: квитанция**
-
-```prisma
-model Payment {
-  id            String @id @default(cuid())
-  receiptFileId String?
-  receiptFile   File?  @relation("ReceiptFiles", fields: [receiptFileId], references: [id])
-  // ... другие поля
-}
-```
+> 📄 Полные определения моделей — в [`prisma/schema.prisma`](../../prisma/schema.prisma)
 
 ---
 

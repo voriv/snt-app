@@ -218,7 +218,7 @@ model File {
   originalName String
   mimeType     String
   size         Int
-  content      Bytes     @db.Bytes
+  content      String     // Base64-encoded file content
   isDeleted    Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

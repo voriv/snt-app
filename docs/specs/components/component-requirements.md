@@ -4,20 +4,6 @@
 
 ---
 
-## Метаданные
-
-```yaml
-тип: specification
-название: Component Requirements
-статус: на обсуждении
-автор: Architect
-дата-создания: 2026-06-23
-дата-обновления: 2026-06-23
-версия: 0.1.0
-```
-
----
-
 ## 0. Общие положения
 
 Настоящий документ определяет единые требования к созданию, именованию, структуре, декомпозиции, используемым библиотекам и самодокументированию **всех компонентов** проекта `snt-app`.
@@ -32,6 +18,7 @@ UI-специфичные требования определены в отде�
 | [`.roo/rules/change-rules.md`](../../../.roo/rules/change-rules.md) | Порядок внесения изменений |
 | [`docs/specs/component-spec-requirements.md`](../component-spec-requirements.md) | Требования к спецификациям компонентов |
 | [`docs/specs/component-types-classification.md`](../component-types-classification.md) | Классификация типов компонентов |
+| [`docs/specs/components/services/spec-service-template.md`](./services/spec-service-template.md) | Шаблон спецификации Service компонента |
 | [`architecture/structure/03-components-lib.md`](../../../architecture/structure/03-components-lib.md) | Структура компонентов и библиотек |
 | [`docs/specs/components/ui/ui-component-requirements.md`](./ui/ui-component-requirements.md) | UI-специфичные требования |
 

@@ -2,16 +2,6 @@
 
 ## Статус: На обсуждении
 
-## Метаданные
-
-| Параметр | Значение |
-|----------|----------|
-| Версия | 0.1.0 |
-| Дата создания | 2026-06-24 |
-| Автор | Architect |
-| Связанные документы | [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md), [`api-router-requirements.md`](components/api-routers/api-router-requirements.md) |
-| Состояние | На обсуждении |
-
 ---
 
 ## 0. Общие положения
@@ -33,8 +23,61 @@
 | Метод | Описание | Статус |
 |-------|----------|--------|
 | **Email/Password** | Логин через email + bcrypt пароль | Обязательно |
+| **Регистрация** | Создание учётной записи по email + password | Обязательно |
 
-### 1.2 Email/Password аутентификация
+### 1.2 Регистрация (Register)
+
+**Описание:** Новый пользователь может создать учётную запись через `/register`, введя email и пароль.
+
+**Параметры:**
+
+| Параметр | Требование | Обоснование |
+|----------|------------|-------------|
+| Email | Валидный email, уникальный | Основной идентификатор |
+| Пароль | Минимальная длина 6 символов | Безопасность |
+| Роль | GUEST (по умолчанию) | Новый пользователь без полного доступа |
+| isActive | true (авто-активация) | Без email-верификации на данном этапе |
+
+**Процесс:**
+
+```mermaid
+sequenceDiagram
+    participant C as Client (/register)
+    participant A as API (/api/auth/register)
+    participant S as AuthService
+    participant R as UserRepository
+    participant B as DB (Users)
+    
+    C->>A: POST /api/auth/register { email, password }
+    A->>S: register({ email, password })
+    S->>S: Zod валидация (email format, password >= 6)
+    S->>R: findByEmail(email)
+    R-->>S: user | null
+    
+    alt Email существует
+        S-->>A: ConflictError ('email-already-exists')
+        A-->>C: 409 { error: { code: 'CONFLICT', message: '...' } }
+    else Email свободен
+        S->>S: bcrypt.hash(password, 12)
+        S->>R: create({ email, passwordHash, role: 'GUEST', isActive: true })
+        R-->>S: User
+        S-->>A: User { id, email, role: 'GUEST' }
+        A->>A: createSession(user)
+        A-->>C: 201 { data: { user, session } }
+        C->>C: redirect to /
+    end
+```
+
+**Бизнес-правила:**
+
+| ID | Правило | Описание | Ошибка |
+|----|---------|----------|--------|
+| REG-001 | Уникальность email | email не должен существовать в системе | `ConflictError` |
+| REG-002 | Минимальная длина пароля | >= 6 символов | `ValidationError` |
+| REG-003 | Автоматическая роль GUEST | Новый пользователь получает роль GUEST | — |
+| REG-004 | Автоматическая активация | `isActive = true` сразу | — |
+
+### 1.3 Email/Password аутентификация
 
 **Параметры:**
 
@@ -44,7 +87,7 @@
 | Пароль | Минимальная длина зависит от требований безопасности | Безопасность |
 | Хеширование | bcrypt, rounds = 12 | Стойкость к брутфорсу |
 
-### 1.3 JWT Token
+### 1.4 JWT Token
 
 **Структура access токена:**
 
@@ -85,7 +128,7 @@ interface RefreshToken {
 | Expiration | 7 дней | Удобство пользователя |
 | Хранение | БД (для возможности отзыва) | Безопасность |
 
-### 1.4 Обновление токена (Refresh Token Flow)
+### 1.5 Обновление токена (Refresh Token Flow)
 
 **Процесс:**
 
@@ -112,7 +155,7 @@ sequenceDiagram
     end
 ```
 
-### 1.5 Восстановление пароля
+### 1.6 Восстановление пароля
 
 **Процесс:**
 

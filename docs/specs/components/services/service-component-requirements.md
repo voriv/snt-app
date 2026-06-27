@@ -4,20 +4,6 @@
 
 ---
 
-## Метаданные
-
-```yaml
-тип: specification
-название: Service Component Requirements
-статус: на обсуждении
-автор: Architect
-дата-создания: 2026-06-24
-дата-обновления: 2026-06-24
-версия: 0.1.0
-```
-
----
-
 ## 0. Общие положения
 
 Настоящий документ определяет единые требования к созданию, именованию, структуре, декомпозиции, используемым библиотекам и самодокументированию **Service компонентов** проекта `snt-app`.
@@ -32,6 +18,7 @@ Service слой является центральным звеном Clean Arch
 | [`.roo/rules/change-rules.md`](../../../../.roo/rules/change-rules.md) | Порядок внесения изменений |
 | [`docs/specs/component-spec-requirements.md`](../../component-spec-requirements.md) | Требования к спецификациям компонентов |
 | [`docs/specs/components/component-requirements.md`](../component-requirements.md) | Общие требования к компонентам проекта |
+| [`specs/components/services/spec-service-template.md`](./spec-service-template.md) | Шаблон спецификации Service компонента |
 | [`architecture/structure/01-architecture.md`](../../../architecture/structure/01-architecture.md) | Архитектура и технологические решения |
 
 ### 0.2 Принципы разработки

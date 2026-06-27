@@ -2,16 +2,6 @@
 
 ## Статус: На обсуждении
 
-## Метаданные
-
-| Параметр | Значение |
-|----------|----------|
-| Версия | 0.1.0 |
-| Дата создания | 2026-06-24 |
-| Автор | Architect |
-| Связанные документы | [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md), [`service-component-requirements.md`](components/services/service-component-requirements.md) |
-| Состояние | На обсуждении |
-
 ---
 
 ## 0. Общие положения

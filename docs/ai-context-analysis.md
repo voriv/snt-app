@@ -1,8 +1,8 @@
 # Анализ размера контекста документации для AI
 
-> Дата последней оптимизации: 2026-06-25 (Фаза 4 завершена)
+> Дата последней оптимизации: 2026-06-25 (Фаза 5 завершена)
 
-## 1. Текущее состояние (после оптимизации Фаза 1+2+3+4)
+## 1. Текущее состояние (после оптимизации Фаза 1+2+3+4+5)
 
 ### 1.1 Реестр файлов документации
 
@@ -19,6 +19,15 @@
 | `context-segments/04-component-patterns.md` | ~135 | ~7 KB |
 | `context-segments/05-api-patterns.md` | ~120 | ~6 KB |
 | `context-segments/06-websocket.md` | ~90 | ~4 KB |
+| `context-segments/07-monitoring.md` | ~105 | ~5 KB |
+| `context-segments/08-file-storage.md` | ~95 | ~5 KB |
+| **Lite спецификации** | | |
+| `specs-lite/README.md` | ~30 | ~2 KB |
+| `specs-lite/service-requirements-lite.md` | ~100 | ~5 KB |
+| `specs-lite/api-router-requirements-lite.md` | ~100 | ~5 KB |
+| `specs-lite/websocket-client-lite.md` | ~80 | ~4 KB |
+| `specs-lite/ui-requirements-lite.md` | ~65 | ~3 KB |
+| `specs-lite/repository-requirements-lite.md` | ~75 | ~4 KB |
 | **Архитектура** | | |
 | `architecture/ARCHITECTURE.md` | 554 | ~21 KB |
 | `architecture/fr-rules.md` | 117 | ~8 KB |
@@ -245,24 +254,47 @@ docs/
 | 21 | Обновлён `quick-reference.md` — навигация по сегментам | [`quick-reference.md`](quick-reference.md) | 67→83 строк |
 | 22 | Обновлён `CHANGELOG.md` — запись о Фазе 4 | [`CHANGELOG.md`](CHANGELOG.md) | +3 строки |
 
-### 5.4 Итоговая экономия (все фазы)
+### 5.4 Фаза 5 — ВЫПОЛНЕНО
 
-| Метрика | До (изначально) | После Фазы 1+2 | После Фазы 3 | После Фазы 4 | Итого |
-|---------|----------------|----------------|--------------|--------------|-------|
-| Всего строк | ~7,936 | ~7,050 | ~7,192 | ~7,928* | **+736 строк (новые сегменты)** |
-| Типичный AI-контекст | ~7,936 | ~7,050 | 67 строк | **83 строки** (quick-ref) | **99.0%** экономия |
-| Расширенный контекст (1 тема) | — | ~7,050 | ~1,500 | **~200 строк** (quick-ref + сегмент) | **~97%** экономия |
-| Расширенный контекст (2-3 темы) | — | ~7,050 | ~3,000 | **~350 строк** (quick-ref + 2-3 сегмента) | **~95%** экономия |
-| Использование GPT-4-128K | 78-98% | 69-86% | <1% | **<1%** (типичный) / **6-8%** (сегменты) | **-70-98%** |
+| # | Изменение | Файл | Объём |
+|---|----------|------|-------|
+| 23 | Создан `07-monitoring.md` — логирование и мониторинг кратко | [`07-monitoring.md`](context-segments/07-monitoring.md) | Новый: ~105 строк |
+| 24 | Создан `08-file-storage.md` — файловое хранилище кратко | [`08-file-storage.md`](context-segments/08-file-storage.md) | Новый: ~95 строк |
+| 25 | Создан `specs-lite/` — lite версии спецификаций компонентов | [`specs-lite/README.md`](specs-lite/README.md) | 5 файлов, ~450 строк суммарно |
+| 26 | Обновлён `file-storage.md` — удалён дубликат Prisma Schema | [`file-storage.md`](specs/file-storage.md) | ~70 строк |
+| 27 | Обновлён `quick-reference.md` — навигация по lite-версиям | [`quick-reference.md`](quick-reference.md) | +20 строк |
+| 28 | Обновлён `context-segments/README.md` — добавлены новые сегменты | [`context-segments/README.md`](context-segments/README.md) | +10 строк |
 
-> \* Фаза 4 увеличила общий объём документации за счёт новых сегментов, но кардинально снизила контекст, необходимый AI для конкретных задач.
+### 5.6 Фаза 6 — УДАЛЕНИЕ МЕТАДАННЫХ — ВЫПОЛНЕНО
 
-### 5.5 Дальнейшие возможности (Фаза 5+)
+| # | Изменение | Файл | Объём |
+|---|----------|------|-------|
+| 29 | Удалён блок «Метаданные» (YAML table, ~12 строк) | [`component-requirements.md`](specs/components/component-requirements.md) | ~12 строк |
+| 30 | Удалён блок «Метаданные» (YAML table, ~12 строк) | [`service-component-requirements.md`](specs/components/services/service-component-requirements.md) | ~12 строк |
+| 31 | Удалён блок «Метаданные» (YAML table, ~12 строк) | [`api-router-requirements.md`](specs/components/api-routers/api-router-requirements.md) | ~12 строк |
+| 32 | Удалён блок «Метаданные» (YAML table, ~12 строк) | [`ui-component-requirements.md`](specs/components/ui/ui-component-requirements.md) | ~12 строк |
+| 33 | Удалён блок «Метаданные» (YAML table, ~12 строк) | [`repository-component-requirements.md`](specs/components/repositories/repository-component-requirements.md) | ~12 строк |
+| 34 | Удалён блок «Метаданные» (table, ~10 строк) | [`websocket-client.md`](specs/components/websocket-client.md) | ~10 строк |
+| 35 | Удалён блок «Метаданные» (table, ~10 строк) | [`auth.md`](specs/auth.md) | ~10 строк |
+| 36 | Удалён блок «Метаданные» (table, ~10 строк) | [`file-storage.md`](specs/file-storage.md) | ~10 строк |
+| 37 | Удалён блок «Метаданные» (table, ~10 строк) | [`logging-monitoring.md`](specs/logging-monitoring.md) | ~10 строк |
+| 38 | Удалён блок «Метаданные» (YAML table, ~16 строк) | [`spec-api-router-template.md`](specs/components/api-routers/spec-api-router-template.md) | ~16 строк |
+| 39 | Удалён блок «Метаданные» (YAML table, ~16 строк) | [`spec-service-template.md`](specs/components/services/spec-service-template.md) | ~16 строк |
+| 40 | Обновлён `CHANGELOG.md` — запись о Фазе 6 | [`CHANGELOG.md`](CHANGELOG.md) | +1 строка |
 
-| Возможность | Потенциал | Сложность |
-|-------------|-----------|-----------|
-| Автоматизация проверки дубликатов при PR | Поддержание оптимизации | Средняя |
-| Генерация сегментов из исходного кода | Автоматическая актуальность | Высокая |
+**Итого удалено: ~136 строк дублируемых метаданных**
+
+### 5.7 Итоговая экономия (все фазы)
+
+| Метрика | До (изначально) | После Фазы 1+2 | После Фазы 3 | После Фазы 4 | После Фазы 5 | Итого |
+|---------|----------------|----------------|--------------|--------------|-------------|-------|
+| Всего строк | ~7,936 | ~7,050 | ~7,192 | ~7,928* | **~8,378** | **+442 строки (новые сегменты)** |
+| Типичный AI-контекст | ~7,936 | ~7,050 | 67 строк | **83 строки** (quick-ref) | **83 строки** (quick-ref) | **99.0%** экономия |
+| Расширенный контекст (1 тема) | — | ~7,050 | ~1,500 | **~200 строк** (quick-ref + сегмент) | **~190 строк** (lite) | **~98%** экономия |
+| Расширенный контекст (2-3 темы) | — | ~7,050 | ~3,000 | **~350 строк** (quick-ref + 2-3 сегмента) | **~290 строк** (lite) | **~96%** экономия |
+| Использование GPT-4-128K | 78-98% | 69-86% | <1% | **<1%** (типичный) / **6-8%** (сегменты) | **<1%** (типичный) / **~2-4%** (lite) | **-74-98%** |
+
+> \* Фаза 4-5 увеличила общий объём документации за счёт новых сегментов и lite-версий, но кардинально снизила контекст, необходимый AI для конкретных задач.
 
 ---
 
@@ -276,7 +308,7 @@ docs/
 - Новые зависимости — только в [`shared/dependencies.md`](shared/dependencies.md)
 - Новые чек-листы — только в [`shared/checklists.md`](shared/checklists.md)
 
-### 6.2 AI-френдли структура (текущая — после Фазы 4)
+### 6.2 AI-френдли структура (текущая — после Фазы 5)
 
 ```
 docs/
@@ -288,7 +320,16 @@ docs/
 │   ├── 03-auth-security.md         JWT, RBAC, WebSocket auth, защита
 │   ├── 04-component-patterns.md    Service, Repository, DI, ошибки
 │   ├── 05-api-patterns.md          Route структура, ApiResponse, пагинация
-│   └── 06-websocket.md             Протокол, handlers, rooms, events
+│   ├── 06-websocket.md             Протокол, handlers, rooms, events
+│   ├── 07-monitoring.md            Логирование, мониторинг, health check
+│   └── 08-file-storage.md          Файловое хранилище bytea
+├── specs-lite/                     ← Lite-версии спецификаций (~65-100 строк)
+│   ├── README.md                   Навигация по lite-версиям
+│   ├── service-requirements-lite.md    Паттерны сервисов
+│   ├── api-router-requirements-lite.md API Router паттерны
+│   ├── websocket-client-lite.md      WS Client паттерны
+│   ├── ui-requirements-lite.md       UI компоненты паттерны
+│   └── repository-requirements-lite.md Repository паттерны
 ├── CHANGELOG.md                     ← Единая история изменений
 ├── shared/                          ← Общие справочники
 │   ├── checklists.md               Все чек-листы
@@ -316,5 +357,10 @@ docs/
 | Разработка компонента | quick-ref + `04-component-patterns.md` | ~220 строк |
 | Разработка API | quick-ref + `05-api-patterns.md` | ~200 строк |
 | Работа с WebSocket | quick-ref + `06-websocket.md` | ~170 строк |
+| Мониторинг и логи | quick-ref + `07-monitoring.md` | ~190 строк |
+| Файловое хранилище | quick-ref + `08-file-storage.md` | ~180 строк |
+| Разработка сервиса (lite) | quick-ref + `service-requirements-lite.md` | ~185 строк |
+| Разработка API Router (lite) | quick-ref + `api-router-requirements-lite.md` | ~185 строк |
 | Комплексная задача | quick-ref + 2-3 сегмента | ~350 строк |
-| Детальная спецификация | сегмент + полный документ | ~500-1000 строк |
+| Lite-разработка | quick-ref + 1 lite-версия | **~190 строк** |
+| Детальная спецификация | lite + полный документ | ~400-800 строк |
