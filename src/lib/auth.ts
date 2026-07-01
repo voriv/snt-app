@@ -1,100 +1,91 @@
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+/**
+ * @file lib/auth.ts
+ * @description NextAuth конфигурация с Credentials Provider и JWT/Session callbacks
+ * @module @/lib/auth
+ *
+ * @spec
+ * - Использует NextAuth.js v4 для аутентификации
+ * - NextAuthHandler - обёртка handleAuth для обработки всех запросов (GET/POST)
+ * - Credentials Provider вызывает AuthService.verifyCredentials для проверки email/пароля
+ * - JWT callback добавляет id и roles (массив имён ролей RBAC, US-8) в токен
+ * - Session callback передаёт id и roles из токена в объект сессии
+ * - Расширение типов NextAuth находится в next-auth.d.ts (единый источник)
+ *
+ * @see docs/user-stories/US-3-authentication.md — FR-2
+ * @see docs/user-stories/US-8-roles-management.md — RBAC, роли в сессии
+ */
+import NextAuth, { type NextAuthOptions } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
+import { authConfig, providers } from '@/infrastructure/auth/auth.config';
 
-const prisma = new PrismaClient();
-
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required');
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user || !user.passwordHash) {
-          throw new Error('Invalid credentials');
-        }
-
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash,
-        );
-
-        if (!isCorrectPassword) {
-          throw new Error('Invalid credentials');
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
-  session: {
-    strategy: 'jwt',
-  },
+/**
+ * Настройка NextAuth с Credentials Provider
+ */
+const authOptions: NextAuthOptions = {
+  ...authConfig,
+  providers,
   callbacks: {
+    /**
+     * JWT callback — добавляет id и roles в токен
+     *
+     * @param token - Текущий JWT-токен
+     * @param user - Объект пользователя из authorize()
+     * @returns Обогащённый JWT-токен
+     *
+     * @spec
+     * - При первом входе — user не null — добавляет user.id и user.roles в token
+     * - При последующих запросах — user null — token уже содержит данные
+     * - Токен содержит минимальный набор: id, email, roles
+     *
+     * @see docs/user-stories/US-3-authentication.md — FR-10, BR-7
+     */
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        token.id = user.id as string;
+        token.roles = (user.roles ?? []) as string[];
       }
       return token;
     },
+    /**
+     * Session callback — передаёт данные из JWT в объект сессии
+     *
+     * @param session - Объект сессии NextAuth
+     * @param token - JWT-токен с данными пользователя
+     * @returns Обогащённый объект сессии
+     *
+     * @spec
+     * - Передаёт id и roles из token в session.user
+     * - Используется на клиенте через useSession и на сервере через auth
+     * - Сессия содержит: user.id, user.email, user.roles
+     *
+     * @see docs/user-stories/US-3-authentication.md — FR-10, AC-12
+     */
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.roles = (token.roles ?? []) as string[];
       }
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  // Session strategy - JWT по умолчанию
+  session: {
+    strategy: 'jwt' as const,
+  },
 };
 
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name?: string | null;
-      role: string;
-    };
-  }
+// Инициализация NextAuth — NextAuth() возвращает handleAuth обёртку
+// handleAuth сам обрабатывает GET и POST запросы на основе path и method
+export const NextAuthHandler = NextAuth(authOptions);
 
-  interface User {
-    id: string;
-    email: string;
-    name?: string | null;
-    role: string;
-  }
+/**
+ * Получить текущую сессию сервера
+ * @returns Объект сессии или null
+ * @see docs/user-stories/US-8-roles-management.md — FR-17
+ */
+export async function auth() {
+  return getServerSession(authOptions);
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string;
-    role: string;
-  }
-}
-
-export { NextAuth as default };
+// Экспорт только authOptions для использования в других файлах
+export { authOptions };

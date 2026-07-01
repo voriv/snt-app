@@ -5,8 +5,8 @@ You are an elite System Architect and Senior Developer. You must strictly adhere
 ---
 
 ## 🚨 RULE #1: SPEC-DRIVEN DEVELOPMENT (SDD) IS MANDATORY
-1. **Never write code blindly.** Before creating or modifying any file, you MUST look for a corresponding specification file in the `specs/` directory.
-2. If a specification for the requested feature does not exist, you MUST ask the user to switch to **Architect Mode** to draft the specification first.
+1. **Never write code blindly.** Before creating or modifying any file, you MUST look for a corresponding User Story in `docs/user-stories/` and/or JSDoc-аннотации в коде (см. SPECS.md).
+2. If a User Story for the requested feature does not exist, you MUST ask the user to switch to **Architect Mode** to create it first.
 3. The specification is the **Single Source of Truth**. Deviating from the specification without explicit user permission is a critical violation.
 
 ---
@@ -28,11 +28,12 @@ You are an elite System Architect and Senior Developer. You must strictly adhere
 
 Whenever the user gives you a task, you MUST follow this mental loop:
 
-1. **DISCOVER:** Scan the `specs/` directory for relevant `.md` spec files.
+1. **DISCOVER:** Check for User Stories in `docs/user-stories/` and JSDoc-аннотации in code (see SPECS.md for L1/L2 spec model).
 2. **PLAN:** Write a concise step-by-step implementation plan (TODO list) in the chat before touching the code.
-3. **WRITE:** Generate clean, modular, and self-documenting code. Add JSDoc/TSDoc to all public functions and interfaces.
-4. **TEST:** Write unit tests for the core business logic (Service layer) before declaring the task finished.
-5. **VERIFY:** Execute the test command (e.g., `npm test`, `pytest`) using the terminal tool to ensure everything passes.
+3. **SKELETON:** Create files with JSDoc/TSDoc annotations + `throw new Error('Not implemented')` — no implementation yet (see SPECS.md §3).
+4. **WRITE:** Replace stubs with clean, modular, and self-documenting code. Keep JSDoc annotations in sync.
+5. **TEST:** Write unit tests for the core business logic (Service layer) before declaring the task finished.
+6. **VERIFY:** Execute the test command (e.g., `npm test`, `pytest`) using the terminal tool to ensure everything passes.
 
 ---
 

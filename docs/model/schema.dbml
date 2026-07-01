@@ -1,0 +1,169 @@
+Project "snt_berezhki_nt" {
+  note: "Концептуальная модель данных для системы управления СНТ Березки НТ"
+  note: "Все имена таблиц и колонок в snake_case"
+  note: "Prisma использует @map для маппинга на snake_case"
+}
+
+// ============================================
+// Table: users
+// ============================================
+Table users {
+  id           varchar       [pk, not null] // cuid()
+  email        varchar       [unique, not null]
+  name         varchar
+  password     varchar       [not null]
+  role         varchar       [not null, ref: > roles]
+  avatar       varchar
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Unique constraint: email
+    Default role: GUEST
+    '''
+}
+
+// ============================================
+// Table: user_profiles
+// ============================================
+Table user_profiles {
+  id           varchar       [pk, not null] // cuid()
+  user_id      varchar       [unique, not null, ref: > users]
+  first_name   varchar       [not null]
+  middle_name  varchar
+  last_name    varchar       [not null]
+  phone        varchar
+  avatar       varchar
+  bio          varchar
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Unique constraint: user_id
+    Foreign key: user_id -> users.id
+    '''
+}
+
+// ============================================
+// Table: members
+// ============================================
+Table members {
+  id           varchar       [pk, not null] // cuid()
+  user_id      varchar       [unique, not null, ref: > users]
+  first_name   varchar       [not null]
+  last_name    varchar       [not null]
+  birth_date   timestamp
+  phone        varchar
+  email        varchar
+  is_active    boolean       [default: true, not null]
+  note         varchar
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Unique constraint: user_id
+    Foreign key: user_id -> users.id
+    Related to: plots (optional), agreements, payments
+    '''
+}
+
+// ============================================
+// Table: plots
+// ============================================
+Table plots {
+  id           varchar       [pk, not null] // cuid()
+  plot_number  varchar       [unique, not null]
+  area         "decimal(10, 2)" [not null]
+  address      varchar
+  note         varchar
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Unique constraint: plot_number
+    Related to: members (optional), agreements, payments
+    '''
+}
+
+// ============================================
+// Table: agreements
+// ============================================
+Table agreements {
+  id          varchar              [pk, not null] // cuid()
+  type        varchar              [not null] // membership, utility, etc.
+  start_date  timestamp            [not null]
+  end_date    timestamp
+  amount      "decimal(10, 2)"       [not null]
+  status      varchar              [default: 'DRAFT', not null, ref: > agreement_statuses]
+  note        varchar
+  member_id   varchar              [not null, ref: > members]
+  plot_id     varchar              [ref: > plots]
+  created_at  timestamp            [default: now(), not null]
+  updated_at  timestamp            [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Foreign key: member_id -> members.id
+    Foreign key: plot_id -> plots.id (nullable)
+    Enums: type, status
+    '''
+}
+
+// ============================================
+// Table: payments
+// ============================================
+Table payments {
+  id            varchar         [pk, not null] // cuid()
+  amount        "decimal(10, 2)"  [not null]
+  date          timestamp       [default: now(), not null]
+  description   varchar
+  status        varchar         [default: 'PENDING', not null, ref: > payment_statuses]
+  created_at    timestamp       [default: now(), not null]
+  updated_at    timestamp       [default: now(), not null]
+  member_id     varchar         [not null, ref: > members]
+  plot_id       varchar         [ref: > plots]
+
+  Notes:'''
+    Primary key: id
+    Foreign key: member_id -> members.id
+    Foreign key: plot_id -> plots.id (nullable)
+    Enums: status
+    '''
+}
+
+// ============================================
+// Enums
+// ============================================
+Enum roles {
+  GUEST
+  MEMBER
+  ADMIN
+}
+
+Enum agreement_statuses {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+Enum payment_statuses {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+// ============================================
+// Relationships
+// ============================================
+Ref: members.user_id > users.id
+Ref: user_profiles.user_id > users.id
+Ref: agreements.member_id > members.id
+Ref: agreements.plot_id > plots.id
+Ref: payments.member_id > members.id
+Ref: payments.plot_id > plots.id

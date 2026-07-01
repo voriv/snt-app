@@ -1,43 +1,32 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import './globals.css';
-import { SessionWrapper } from '@/components/providers/session-wrapper';
-import { ThemeWrapper } from '@/components/providers/theme-wrapper';
-import { AuthenticatedLayout } from '@/components/layout/sidebar-nav';
-import { APP_NAME, APP_DESCRIPTION } from '@/lib/app-config';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Providers } from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: APP_DESCRIPTION,
+  title: "СНТ Берёзки-НТ",
+  description: "Управление садоводческим товариществом",
 };
 
+/**
+ * @page RootLayout
+ * @description Корневой layout приложения
+ *
+ * @spec
+ * - Server Component
+ * - Оборачивает приложение в Providers (ThemeProvider) — единый источник истины для темы
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SessionWrapper>
-          <ThemeWrapper defaultTheme="light">
-            <AuthenticatedLayout>
-              {children}
-            </AuthenticatedLayout>
-          </ThemeWrapper>
-        </SessionWrapper>
+    <html lang="ru">
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

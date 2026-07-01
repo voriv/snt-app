@@ -49,3 +49,4 @@ prisma/migrations/
 # OS
 Thumbs.db
 node_modules
+prompts

@@ -2,57 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========================
-   Тема: Светлая (light)
-   ======================== */
-.theme-light {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-accent: #3b82f6;
-  --color-border: #e5e7eb;
-
+/* ==================== Базовые CSS переменные ==================== */
+:root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  color-scheme: light;
 }
 
-/* ========================
-   Тема: Тёмная (dark)
-   ======================== */
-.theme-dark {
-  --color-bg-primary: #1f2937;
-  --color-bg-secondary: #111827;
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-accent: #60a5fa;
-  --color-border: #374151;
+/* ==================== Тема: Светлая (по умолчанию) ==================== */
+[data-theme='light'] {
+  --theme-bg-primary: #ffffff;
+  --theme-bg-secondary: #f9fafb;
+  --theme-text-primary: #111827;
+  --theme-text-secondary: #6b7280;
+  --theme-border-color: #e5e7eb;
+  --theme-accent: #3b82f6;
+  --theme-nav-bg: #ffffff;
+  --theme-nav-shadow: rgba(0, 0, 0, 0.1);
 
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
+  /* Переменные для элементов форм (input, textarea, select) */
+  --theme-input-bg: #ffffff;
+  --theme-input-text: #111827;
+  --theme-input-placeholder: #6b7280;
+  --theme-input-border: #d1d5db;
+  --theme-input-focus-border: #3b82f6;
+
+  color-scheme: light;
 }
 
-/* ========================
-   Тема: Садовая (garden)
-   ======================== */
-.theme-garden {
-  --color-bg-primary: #f5f5dc;
-  --color-bg-secondary: #fafaf0;
-  --color-text-primary: #2d5016;
-  --color-text-secondary: #556b2f;
-  --color-accent: #4caf50;
-  --color-border: #c5dcb0;
+/* ==================== Тема: Темная ==================== */
+[data-theme='dark'] {
+  --theme-bg-primary: #111827;
+  --theme-bg-secondary: #1f2937;
+  --theme-text-primary: #f9fafb;
+  --theme-text-secondary: #9ca3af;
+  --theme-border-color: #374151;
+  --theme-accent: #8b5cf6;
+  --theme-nav-bg: #1f2937;
+  --theme-nav-shadow: rgba(0, 0, 0, 0.3);
 
-  --foreground-rgb: 45, 80, 22;
-  --background-start-rgb: 245, 245, 220;
-  --background-end-rgb: 250, 250, 240;
+  /* Переменные для элементов форм (input, textarea, select) */
+  --theme-input-bg: #1f2937;
+  --theme-input-text: #f9fafb;
+  --theme-input-placeholder: #9ca3af;
+  --theme-input-border: #374151;
+  --theme-input-focus-border: #8b5cf6;
+
+  color-scheme: dark;
 }
 
-/* ========================
-   Базовые стили
-   ======================== */
+/* ==================== Тема: Зеленая ==================== */
+[data-theme='green'] {
+  --theme-bg-primary: #064e3b;
+  --theme-bg-secondary: #065f46;
+  --theme-text-primary: #ecfdf5;
+  --theme-text-secondary: #6ee7b7;
+  --theme-border-color: #047857;
+  --theme-accent: #10b981;
+  --theme-nav-bg: #065f46;
+  --theme-nav-shadow: rgba(0, 0, 0, 0.2);
+
+  /* Переменные для элементов форм (input, textarea, select) */
+  --theme-input-bg: #065f46;
+  --theme-input-text: #ecfdf5;
+  --theme-input-placeholder: #6ee7b7;
+  --theme-input-border: #047857;
+  --theme-input-focus-border: #10b981;
+
+  color-scheme: dark;
+}
+
+/* ==================== Системные настройки (при первом создании) ==================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+/* ==================== Применение переменных ==================== */
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -63,9 +93,116 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* ========================
-   Утилиты
-   ======================== */
+/* Применение темы к основным элементам */
+[data-theme] .min-h-screen {
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-text-primary);
+}
+
+[data-theme] .bg-white {
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+}
+
+[data-theme] .bg-gray-50 {
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-text-primary);
+}
+
+[data-theme] .bg-gray-900 {
+  background-color: var(--theme-bg-primary);
+}
+
+[data-theme] .text-gray-900,
+[data-theme] .dark .text-gray-900 {
+  color: var(--theme-text-primary);
+}
+
+[data-theme] .text-gray-700 {
+  color: var(--theme-text-primary);
+  opacity: 0.9;
+}
+
+[data-theme] .text-gray-500 {
+  color: var(--theme-text-secondary);
+}
+
+[data-theme] .hover\\:text-gray-700:hover {
+  color: var(--theme-text-primary);
+}
+
+[data-theme] .border-gray-200 {
+  border-color: var(--theme-border-color);
+}
+
+[data-theme] .border-gray-300:hover {
+  border-color: var(--theme-text-secondary);
+}
+
+[data-theme] .shadow-sm {
+  box-shadow: 0 1px 2px 0 var(--theme-nav-shadow);
+}
+
+/* ==================== Элементы форм (input, textarea, select) ==================== */
+/*
+ * Браузерные дефолты: input/textarea/select имеют белый фон из user-agent stylesheet,
+ * который НЕ наследуется от родителя. В тёмной/зелёной теме это приводило к
+ * "белый фон + светлый текст" — ввод не был виден.
+ * Решение: задаём фон/цвет/плейсхолдер/каретку через CSS-переменные темы.
+ */
+[data-theme] input,
+[data-theme] textarea,
+[data-theme] select {
+  background-color: var(--theme-input-bg);
+  color: var(--theme-input-text);
+  caret-color: var(--theme-input-text);
+  border-color: var(--theme-input-border);
+}
+
+[data-theme] input::placeholder,
+[data-theme] textarea::placeholder {
+  color: var(--theme-input-placeholder);
+  opacity: 1;
+}
+
+[data-theme] input:focus,
+[data-theme] textarea:focus,
+[data-theme] select:focus {
+  border-color: var(--theme-input-focus-border);
+}
+
+/*
+ * Автозаполнение браузера также принудительно использует свой фон.
+ * Переопределяем, чтобы фон совпадал с темой.
+ */
+[data-theme] input:-webkit-autofill,
+[data-theme] input:-webkit-autofill:hover,
+[data-theme] input:-webkit-autofill:focus,
+[data-theme] textarea:-webkit-autofill,
+[data-theme] select:-webkit-autofill {
+  -webkit-text-fill-color: var(--theme-input-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--theme-input-bg) inset;
+  caret-color: var(--theme-input-text);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Бордер-gray-300 у инпутов форм (Tailwind класс) */
+[data-theme] input.border-gray-300,
+[data-theme] textarea.border-gray-300,
+[data-theme] select.border-gray-300 {
+  border-color: var(--theme-input-border);
+}
+
+/* Navbar специфичные стили */
+[data-theme='dark'] .bg-white {
+  background-color: var(--theme-nav-bg);
+}
+
+[data-theme='green'] .bg-white {
+  background-color: var(--theme-nav-bg);
+  color: var(--theme-text-primary);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

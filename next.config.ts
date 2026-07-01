@@ -1,12 +1,12 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
-  poweredByHeader: false,
-  images: {
-    remotePatterns: [],
+  // Оптимизировано для App Router
+  experimental: {
+    // Если понадобятся новые функции React
   },
-  serverExternalPackages: ['bcryptjs'],
+  // Игнорировать архивные файлы при сборке
+  transpilePackages: ["archive"],
 };
 
 export default nextConfig;
