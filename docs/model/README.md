@@ -37,10 +37,8 @@
 | Сущность | Файл описания |
 |----------|---------------|
 | [User](./entities/user.md) | Пользователь системы |
-| [Member](./entities/member.md) | Член СНТ |
 | [Plot](./entities/plot.md) | Участок СНТ |
-| [Agreement](./entities/agreement.md) | Договор |
-| [Payment](./entities/payment.md) | Платёж |
+
 | [Role](./entities/role.md) | Настраиваемая роль системы (RBAC) |
 | [Page](./entities/page.md) | Реестр страниц приложения |
 | [ApiEndpoint](./entities/api-endpoint.md) | Реестр API endpoints с категориями доступа |
@@ -69,10 +67,7 @@ docs/model/
 └── entities/                              # Описание каждой сущности
     ├── user.md
     ├── user-profile.md
-    ├── member.md
     ├── plot.md
-    ├── agreement.md
-    ├── payment.md
     ├── role.md                            # Роль системы (RBAC)
     ├── page.md                            # Реестр страниц
     ├── api-endpoint.md                    # Реестр API endpoints

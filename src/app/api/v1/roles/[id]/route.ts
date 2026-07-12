@@ -82,10 +82,9 @@ async function handleDelete(_request: NextRequest, context: RouteContext) {
   }
 }
 
-// Временно отключена защита withRoleGuard — будет реализована в US-9
-export const GET = handleGet;
-export const PATCH = handlePatch;
-export const DELETE = handleDelete;
+export const GET = withRoleGuard(handleGet, { method: 'GET', path: '/roles/:id' });
+export const PATCH = withRoleGuard(handlePatch, { method: 'PATCH', path: '/roles/:id' });
+export const DELETE = withRoleGuard(handleDelete, { method: 'DELETE', path: '/roles/:id' });
 
 function errorResponse(error: unknown): NextResponse {
   if (error instanceof Error && 'code' in error) {

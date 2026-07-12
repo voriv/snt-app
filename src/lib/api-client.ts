@@ -30,8 +30,38 @@ class ApiClient {
    * GET запрос
    * @param path - Путь API (относительно baseUrl)
    */
-  async get<T>(path: string): Promise<ApiResponse<T>> {
-    const res = await fetch(`${this.baseUrl}${path}`, { credentials: 'include' });
+  async get<T>(path: string, options?: { signal?: AbortSignal }): Promise<ApiResponse<T>> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      credentials: 'include',
+      signal: options?.signal,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: { message: 'Request failed' } }));
+      throw new Error(error.error?.message || error.message || 'Request failed');
+    }
+    return res.json();
+  }
+
+  /**
+   * GET запрос с query параметрами
+   * @param path - Путь API
+   * @param queryParams - Объект с query параметрами
+   */
+  async getWithQuery<T>(
+    path: string,
+    queryParams: Record<string, string | number | boolean | null | undefined>,
+    options?: { signal?: AbortSignal },
+  ): Promise<ApiResponse<T>> {
+    const queryString = Object.entries(queryParams)
+      .filter(([, value]) => value !== null && value !== undefined && value !== '')
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&');
+
+    const url = queryString ? `${this.baseUrl}${path}?${queryString}` : `${this.baseUrl}${path}`;
+    const res = await fetch(url, {
+      credentials: 'include',
+      signal: options?.signal,
+    });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: { message: 'Request failed' } }));
       throw new Error(error.error?.message || error.message || 'Request failed');
@@ -99,12 +129,21 @@ class ApiClient {
   /**
    * DELETE запрос
    * @param path - Путь API
+   * @returns ApiResponse<T> с данными (если есть) или void
+   *
+   * @spec
+   * - Обрабатывает 204 No Content — возвращает { success: true, data: null }
+   * - При ошибках — пытается распарсить JSON и выбрасывает ошибку
    */
   async delete<T = void>(path: string): Promise<ApiResponse<T>> {
     const res = await fetch(`${this.baseUrl}${path}`, { method: 'DELETE', credentials: 'include' });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: { message: 'Request failed' } }));
       throw new Error(error.error?.message || error.message || 'Request failed');
+    }
+    // 204 No Content — пустое тело
+    if (res.status === 204) {
+      return { success: true, data: null as T };
     }
     return res.json();
   }

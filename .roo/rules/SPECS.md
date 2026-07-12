@@ -62,12 +62,66 @@ flowchart TD
 ### Порядок действий для ИИ-агента
 
 1. **DISCOVER:** Проверить наличие User Story в `docs/user-stories/`. Если нет — создать.
-2. **PLAN:** Составить план реализации — какие файлы нужно создать/изменить, опираясь на User Story.
-3. **SKELETON:** Создать файлы-скелеты с JSDoc-аннотациями + `throw new Error('Not implemented')` в телах методов — БЕЗ реализации.
-4. **REVIEW:** Убедиться, что аннотации полностью описывают контракт компонента и соответствуют User Story. При необходимости — обновить User Story.
-5. **IMPLEMENT:** Заменить заглушки на рабочую реализацию, не меняя аннотации.
-6. **TEST:** Написать тесты, основываясь на аннотациях и User Story.
-7. **UPDATE US:** Обновить User Story — отметить реализованные acceptance criteria.
+2. **PLAN:** Создать план реализации в `docs/plans/us-<номер>-<название>-plan.md` по шаблону [`docs/templates/us-realization-plan.md`](../docs/templates/us-realization-plan.md) — декомпозиция US на задачи по слоям архитектуры.
+3. **DISCUSS:** Обсудить план с пользователем.
+4. **SKELETON:** Создать файлы-скелеты с JSDoc-аннотациями + `throw new Error('Not implemented')` в телах методов — БЕЗ реализации.
+5. **UPDATE PLAN:** Обновить статус задач в плане реализации ([TODO] → [IN PROGRESS] → [DONE]).
+6. **UPDATE US:** Обновить User Story — заполнить/обновить раздел Влияние на слои архитектуры.
+7. **REVIEW:** Убедиться, что аннотации полностью описывают контракт компонента и соответствуют User Story.
+
+---
+
+## 2.1. План реализации User Story
+
+> **Назначение:** План реализации — это документ, который декомпозирует User Story (L2) на технические задачи по слоям архитектуры. Он создаётся на этапе PLAN и передаётся в Code-режим для выполнения.
+
+### Структура плана реализации
+
+План создаётся по шаблону [`docs/templates/us-realization-plan.md`](../docs/templates/us-realization-plan.md) и включает:
+
+| Раздел | Описание |
+|--------|----------|
+| **Метаданные** | US-ID, название, версия, дата, статус |
+| **Ссылки** | На User Story, REQ, модель данных |
+| **Дерево файлов** | Какие файлы создаются/изменяются |
+| **Задачи по слоям** | Декомпозиция по слоям: Модель данных → Types → Validators → Errors → Repository → Service → DI → API → UI → Pages |
+| **Матрица AC → Задачи** | Сопоставление acceptance criteria с задачами |
+| **Чек-лист валидации** | Перед передачей в Code-режим |
+| **История изменений** | Отслеживание версий плана |
+
+### Формат задачи в плане
+
+Каждая задача содержит:
+
+| Параметр | Описание |
+|----------|----------|
+| **ID задачи** | Уникальный идентификатор: `US-{id}-T{слой}-{номер}` |
+| **Статус** | `[TODO]` → `[IN PROGRESS]` → `[DONE]` |
+| **Целевое состояние** | Что должно быть в результате (конкретное описание) |
+| **Чек-лист** | Пошаговый список действий для достижения целевого состояния |
+
+### Порядок обновления плана
+
+1. **ARCHITECT** создаёт план по шаблону на основе User Story
+2. **ARCHITECT** обсуждает план с пользователем
+3. При передаче в **CODE** режим:
+   - ИИ-агент выполняет задачи последовательно
+   - Обновляет статус задач: `[TODO]` → `[IN PROGRESS]` → `[DONE]`
+   - Отмечает выполненные пункты чек-листа
+4. После выполнения: план отражает фактическое состояние реализации
+
+```mermaid
+flowchart TD
+    A[User Story L2] --> B[Создать план реализации]
+    B --> C[Обсудить с пользователем]
+    C --> D[Передать в Code-режим]
+    D --> E[Выполнить задачи слоя за слоем]
+    E --> F[Обновить статус задач]
+    F --> G{Все задачи DONE?}
+    G -- Нет --> E
+    G -- Да --> H[Обновить User Story]
+    H --> I[Чек-лист валидации]
+```
 
 ---
 
@@ -110,24 +164,24 @@ flowchart TD
 
 ```typescript
 /**
- * @service PaymentService
- * @domain payments
- * @description Бизнес-логика управления платежами членов СНТ
+ * @service PlotService
+ * @domain plots
+ * @description Бизнес-логика управления участками СНТ
  *
  * @spec
- * - Валидация: через Zod-схемы из payment.validators.ts
- * - Ошибки: PaymentNotFoundError, PaymentInvalidDataError
- * - Зависимости: IPaymentRepository через DI
+ * - Валидация: через Zod-схемы из plot.validators.ts
+ * - Ошибки: PlotNotFoundError, PlotInvalidDataError
+ * - Зависимости: IPlotRepository через DI
  */
-export class PaymentService {
+export class PlotService {
   /**
-   * Найти платёж по идентификатору
+   * Найти участок по идентификатору
    *
-   * @param id - Уникальный идентификатор платежа
-   * @returns Полный объект Payment
-   * @throws {PaymentNotFoundError} если платёж не найден
+   * @param id - Уникальный идентификатор участка
+   * @returns Полный объект Plot
+   * @throws {PlotNotFoundError} если участок не найден
    */
-  async findById(id: string): Promise<Payment> {
+  async findById(id: string): Promise<Plot> {
     throw new Error('Not implemented');
   }
 }
@@ -141,9 +195,9 @@ export class PaymentService {
 
 ---
 
-## 4. Стандарты JSDoc-аннотаций по слоям
+## 5. Стандарты JSDoc-аннотаций по слоям
 
-### 4.1. UI-компоненты — `src/components/`
+### 5.1. UI-компоненты — `src/components/`
 
 ```typescript
 /**
@@ -176,7 +230,41 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 > **Тег `@spec`** опускается для тривиальных компонентов без логики и состояний — например, чисто декоративных обёрток.
 
-### 4.2. Доменные типы — `src/domains/<domain>/<domain>.types.ts`
+### 5.9. UI-компоненты с обработчиками событий
+
+```typescript
+/**
+ * @component ParticipantRow
+ * @category features/plotUser
+ * @description Ряд таблицы участника участка
+ *
+ * @prop participant - Объект участника
+ * @prop isAdmin - Флаг администратора для отображения кнопок управления
+ * @prop onEdit - Callback для редактирования участника
+ * @prop onDelete - Callback для удаления участника
+ * @prop ref - Forward ref для child refetch-методов
+ *
+ * @spec
+ * - Кнопки редактирования/удаления отображаются только при isAdmin === true
+ * - onDelete вызывает callback, мутация выполняется в родительском компоненте
+ * - Не вызывает window.confirm, делегирует подтверждение родительскому компоненту
+ * - При удалении должен быть вызван parent callback для обновления состояния
+ */
+export interface ParticipantRowProps {
+  participant: PlotUserRoleParticipant;
+  isAdmin: boolean;
+  onEdit?: (participant: PlotUserRoleParticipant) => void;
+  onDelete?: (participant: PlotUserRoleParticipant) => void;
+}
+```
+
+**Чек-лист:**
+- [ ] Используется `useCallback` для всех обработчиков событий
+- [ ] Callbacks передаются в child-компоненты, а не выполняются напрямую
+- [ ] Мутация выполняется в родительском компоненте, child-компонент только вызывает callback
+- [ ] Forward ref используется только для методов рефетча, а не для мутаций
+
+### 5.2. Доменные типы — `src/domains/<domain>/<domain>.types.ts`
 
 ```typescript
 /**
@@ -204,7 +292,7 @@ export interface Member {
 }
 ```
 
-### 4.3. Сервисы — `src/domains/<domain>/<domain>.service.ts`
+### 5.3. Сервисы — `src/domains/<domain>/<domain>.service.ts`
 
 ```typescript
 /**
@@ -234,7 +322,7 @@ export class MemberService {
 }
 ```
 
-### 4.4. Репозитории — `src/domains/<domain>/<domain>.repository.interface.ts`
+### 5.4. Репозитории — `src/domains/<domain>/<domain>.repository.interface.ts`
 
 ```typescript
 /**
@@ -254,7 +342,7 @@ export interface IMemberRepository {
 }
 ```
 
-### 4.5. API Route Handlers — `src/app/api/v1/<resource>/route.ts`
+### 5.5. API Route Handlers — `src/app/api/v1/<resource>/route.ts`
 
 ```typescript
 /**
@@ -288,7 +376,7 @@ export async function GET() { ... }
 export async function POST(request: NextRequest) { ... }
 ```
 
-### 4.6. Страницы — `src/app/.../page.tsx`
+### 5.6. Страницы — `src/app/.../page.tsx`
 
 ```typescript
 /**
@@ -308,7 +396,7 @@ export async function POST(request: NextRequest) { ... }
  */
 ```
 
-### 4.7. Хуки — `src/hooks/`
+### 5.7. Хуки — `src/hooks/`
 
 ```typescript
 /**
@@ -324,7 +412,7 @@ export async function POST(request: NextRequest) { ... }
  */
 ```
 
-### 4.8. Утилиты — `src/lib/`, `src/shared/utils/`
+### 5.8. Утилиты — `src/lib/`, `src/shared/utils/`
 
 ```typescript
 /**
@@ -342,7 +430,7 @@ export async function POST(request: NextRequest) { ... }
 
 ---
 
-## 5. Custom JSDoc Tags — Реестр
+## 6. Custom JSDoc Tags — Реестр
 
 | Тег | Слой | Назначение | Обязательность |
 |-----|------|-----------|---------------|
@@ -372,7 +460,7 @@ export async function POST(request: NextRequest) { ... }
 
 ---
 
-## 6. L2 User Story — связь с L1 Code-Spec
+## 7. L2 User Story — связь с L1 Code-Spec
 
 ### User Story как входной артефакт
 
@@ -420,7 +508,7 @@ User Story НЕ дублирует информацию из JSDoc. Вместо
 
 ---
 
-## 7. Связь с другими правилами
+## 8. Связь с другими правилами
 
 ### С MODEL.md
 
@@ -449,7 +537,7 @@ User Story НЕ дублирует информацию из JSDoc. Вместо
 
 ---
 
-## 8. Ретроактивная аннотация существующего кода
+## 9. Ретроактивная аннотация существующего кода
 
 Все существующие нетривиальные файлы проекта должны быть аннотированы JSDoc в соответствии с данным документом.
 
@@ -470,7 +558,7 @@ User Story НЕ дублирует информацию из JSDoc. Вместо
 
 ---
 
-## 9. Строгие запреты
+## 10. Строгие запреты
 
 - ❌ **Запрещено** реализовывать код без предшествующих JSDoc-аннотаций при создании новых файлов
 - ❌ **Запрещено** дублировать информацию между L1 JSDoc и L2 User Story

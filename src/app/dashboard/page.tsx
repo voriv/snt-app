@@ -1,58 +1,97 @@
 /**
  * @page /dashboard
  * @auth required
- * @description Главная страница дашборда пользователя
+ * @role MEMBER, ADMIN
+ * @description Главная страница панели управления
  *
  * @spec
- * - Отображает статистику СНТ (члены, участки, документы, голосования)
- * - Доступна только авторизованным пользователям
- * - Карточки ведут на соответствующие разделы
+ * - Client Component с 'use client'
+ * - Отображает ссылки на основные разделы системы
+ * - Доступ гарантируется DashboardLayout (редирект на /login при отсутствии сессии)
+ * - Блок "Мои участки" с ссылкой на /dashboard/my-connections (TV-2)
  *
  * @data-flow
- * - Server Component
- * - Статистика hardcoded в текущей версии
- * - Карточки являются ссылками на соответствующие страницы
+ * - dashboard/layout.tsx → useSession() → защита маршрута
+ * - Component рендерит контент без проверки сессии (дублирование убрано)
+ *
+ * @see docs/user-stories/US-8-roles-management.md
+ * @see US-19-3 TV-2: Дашборд — блок "Мои участки"
  */
 'use client';
 
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui';
 
-const stats = [
-  { name: 'Члены СНТ', href: '/dashboard/members', value: '0' },
-  { name: 'Участки', href: '/dashboard/plots', value: '0' },
-  { name: 'Документы', href: '/dashboard/documents', value: '0' },
-  { name: 'Голосования', href: '/dashboard/votes', value: '0' },
-];
+export default function DashboardPage(): React.JSX.Element {
+  const { data: session } = useSession();
 
-export default function DashboardPage() {
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">Требуется авторизация</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="md:flex md:items-center md:justify-between">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-            Дашборд
-          </h2>
-        </div>
-      </div>
+      <div className="py-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+          Панель управления
+        </h1>
 
-      <div className="mt-8">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <Link
-              key={stat.name}
-              href={stat.href}
-              className="relative bg-white pt-6 px-4 shadow sm:rounded-lg sm:px-10"
-            >
-              <dt>
-                <p className="text-sm font-medium text-gray-500 truncate">
-                  {stat.name}
-                </p>
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {stat.value}
-              </dd>
-            </Link>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Управление ролями</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="text-sm text-gray-600 mb-4">
+                Управление ролями, правами доступа и назначением ресурсов
+              </p>
+              <Link
+                href="/dashboard/roles"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Перейти →
+              </Link>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Участки</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="text-sm text-gray-600 mb-4">
+                Реестр земельных участков СНТ
+              </p>
+              <Link
+                href="/dashboard/plots"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Перейти →
+              </Link>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Мои участки</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="text-sm text-gray-600 mb-4">
+                Связи пользователя с участками СНТ
+              </p>
+              <Link
+                href="/dashboard/my-connections"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Перейти →
+              </Link>
+            </CardBody>
+          </Card>
         </div>
       </div>
     </div>

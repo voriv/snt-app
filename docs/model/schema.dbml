@@ -47,91 +47,80 @@ Table user_profiles {
 }
 
 // ============================================
-// Table: members
-// ============================================
-Table members {
-  id           varchar       [pk, not null] // cuid()
-  user_id      varchar       [unique, not null, ref: > users]
-  first_name   varchar       [not null]
-  last_name    varchar       [not null]
-  birth_date   timestamp
-  phone        varchar
-  email        varchar
-  is_active    boolean       [default: true, not null]
-  note         varchar
-  created_at   timestamp     [default: now(), not null]
-  updated_at   timestamp     [default: now(), not null]
-
-  Notes:'''
-    Primary key: id
-    Unique constraint: user_id
-    Foreign key: user_id -> users.id
-    Related to: plots (optional), agreements, payments
-    '''
-}
-
-// ============================================
 // Table: plots
 // ============================================
 Table plots {
-  id           varchar       [pk, not null] // cuid()
-  plot_number  varchar       [unique, not null]
-  area         "decimal(10, 2)" [not null]
-  address      varchar
-  note         varchar
-  created_at   timestamp     [default: now(), not null]
-  updated_at   timestamp     [default: now(), not null]
+  id              varchar       [pk, not null] // cuid()
+  plot_number     varchar       [unique, not null]
+  cadastral_number varchar      [unique, not null]
+  area            "decimal(10, 2)" [not null]
+  address         varchar
+  note            varchar
+  created_at      timestamp     [default: now(), not null]
+  updated_at      timestamp     [default: now(), not null]
 
   Notes:'''
     Primary key: id
-    Unique constraint: plot_number
-    Related to: members (optional), agreements, payments
+    Unique constraint: plot_number, cadastral_number
     '''
 }
 
 // ============================================
-// Table: agreements
+// Table: plot_users (US-19-1)
 // ============================================
-Table agreements {
-  id          varchar              [pk, not null] // cuid()
-  type        varchar              [not null] // membership, utility, etc.
-  start_date  timestamp            [not null]
-  end_date    timestamp
-  amount      "decimal(10, 2)"       [not null]
-  status      varchar              [default: 'DRAFT', not null, ref: > agreement_statuses]
-  note        varchar
-  member_id   varchar              [not null, ref: > members]
-  plot_id     varchar              [ref: > plots]
-  created_at  timestamp            [default: now(), not null]
-  updated_at  timestamp            [default: now(), not null]
+Table plot_users {
+  id              varchar       [pk, not null] // cuid()
+  user_id         varchar       [not null, ref: > users.id]
+  plot_id         varchar       [not null, ref: > plots.id]
+  role            integer       [not null, note: '1=owner, 2=resident, 3=representative']
+  status          varchar       [not null, default: 'active', note: 'active, pending, expired']
+  comment         varchar       [note: 'max 500 chars']
+  assigned_at     timestamp     [default: now(), not null]
+  expires_at      timestamp
+  created_at      timestamp     [default: now(), not null]
+  updated_at      timestamp     [default: now(), not null]
+
+  indexes {
+    user_id
+    plot_id
+    (user_id, plot_id, status) [unique, name: 'unique_active_user_plot']
+  }
 
   Notes:'''
     Primary key: id
-    Foreign key: member_id -> members.id
-    Foreign key: plot_id -> plots.id (nullable)
-    Enums: type, status
+    Foreign keys: user_id -> users.id, plot_id -> plots.id
+    Unique constraint: (user_id, plot_id, status='active')
+    BR-1: Множественные роли на одном участке разрешены
+    BR-2: Множественные владельцы на одном участке разрешены
+    BR-3: Одна активная связь на пару (user_id, plot_id)
     '''
 }
 
 // ============================================
-// Table: payments
+// Table: plot_user_history (US-19-1)
 // ============================================
-Table payments {
-  id            varchar         [pk, not null] // cuid()
-  amount        "decimal(10, 2)"  [not null]
-  date          timestamp       [default: now(), not null]
-  description   varchar
-  status        varchar         [default: 'PENDING', not null, ref: > payment_statuses]
-  created_at    timestamp       [default: now(), not null]
-  updated_at    timestamp       [default: now(), not null]
-  member_id     varchar         [not null, ref: > members]
-  plot_id       varchar         [ref: > plots]
+Table plot_user_history {
+  id              varchar       [pk, not null] // cuid()
+  plot_user_id    varchar       [not null, ref: > plot_users.id]
+  user_id         varchar       [not null, ref: > users.id]
+  plot_id         varchar       [not null, ref: > plots.id]
+  role            integer       [not null, note: 'копия роли на момент изменения']
+  status          varchar       [not null, note: 'копия статуса на момент изменения']
+  comment         varchar       [note: 'копия комментария на момент изменения']
+  changed_by      varchar       [not null, ref: > users.id, note: 'ID администратора']
+  changed_at      timestamp     [default: now(), not null]
+  changed_reason  varchar       [not null, default: 'Initial assignment', note: 'причина изменения']
+
+  indexes {
+    plot_user_id
+    user_id
+    plot_id
+  }
 
   Notes:'''
     Primary key: id
-    Foreign key: member_id -> members.id
-    Foreign key: plot_id -> plots.id (nullable)
-    Enums: status
+    Foreign keys: plot_user_id -> plot_users.id, user_id -> users.id, plot_id -> plots.id, changed_by -> users.id
+    BR-7: История создаётся транзакционно с основной записью
     '''
 }
 
@@ -144,26 +133,25 @@ Enum roles {
   ADMIN
 }
 
-Enum agreement_statuses {
-  DRAFT
-  ACTIVE
-  EXPIRED
-  CANCELLED
+Enum plot_user_role_enum {
+  OWNER [note: '1']
+  RESIDENT [note: '2']
+  REPRESENTATIVE [note: '3']
 }
 
-Enum payment_statuses {
-  PENDING
-  PAID
-  OVERDUE
-  PARTIAL
+Enum plot_user_status_enum {
+  active
+  pending
+  expired
 }
 
 // ============================================
 // Relationships
 // ============================================
-Ref: members.user_id > users.id
 Ref: user_profiles.user_id > users.id
-Ref: agreements.member_id > members.id
-Ref: agreements.plot_id > plots.id
-Ref: payments.member_id > members.id
-Ref: payments.plot_id > plots.id
+Ref: plot_users.user_id > users.id
+Ref: plot_users.plot_id > plots.id
+Ref: plot_user_history.plot_user_id > plot_users.id
+Ref: plot_user_history.user_id > users.id
+Ref: plot_user_history.plot_id > plots.id
+Ref: plot_user_history.changed_by > users.id

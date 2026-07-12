@@ -2,23 +2,23 @@
  * @function matchPath
  * @description Сопоставляет путь запроса с шаблоном, содержащим параметры `:param`
  *
- * @param pattern - Шаблон с параметрами (например `/members/:id`)
- * @param actual - Реальный путь запроса (например `/members/abc123`)
+ * @param pattern - Шаблон с параметрами (например `/plots/:id`)
+ * @param actual - Реальный путь запроса (например `/plots/abc123`)
  * @returns `true` если пути совпадают, `false` в противном случае
  *
  * @spec
  * - `:param` соответствует любому одиночному сегменту пути (`[\\w-]+`)
  * - Количество сегментов pattern и actual должно совпадать
- * - `/members/:id` соответствует `/members/abc123`, но НЕ `/members/abc123/profile`
- * - `/members/:id` соответствует `/members/abc-123` (дефис разрешён)
+ * - `/plots/:id` соответствует `/plots/abc123`, но НЕ `/plots/abc123/profile`
+ * - `/plots/:id` соответствует `/plots/abc-123` (дефис разрешён)
  * - Регистрозависимое сопоставление
  * - Пустые строки и пути без ведущего `/` не валидируются (вызывающий код должен гарантировать формат)
  *
  * @example
- * matchPath('/members/:id', '/members/abc123') // true
- * matchPath('/members/:id', '/members/abc123/profile') // false
- * matchPath('/members', '/members') // true
- * matchPath('/members/:id/posts/:postId', '/members/abc/posts/xyz') // true
+ * matchPath('/plots/:id', '/plots/abc123') // true
+ * matchPath('/plots/:id', '/plots/abc123/profile') // false
+ * matchPath('/plots', '/plots') // true
+ * matchPath('/plots/:id', '/plots/abc') // true
  *
  * @see docs/user-stories/US-8-roles-management.md — FR-16, BR-29
  */

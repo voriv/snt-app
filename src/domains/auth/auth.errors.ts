@@ -57,3 +57,24 @@ export class InvalidCredentialsError extends UnauthorizedError {
     super('Неверный email или пароль');
   }
 }
+
+/**
+ * @type GuestRoleMissingError
+ * @domain auth
+ * @description Системная роль GUEST отсутствует в БД — регистрация отклоняется
+ *
+ * @spec
+ * - Наследуется от BusinessRuleError — HTTP 500
+ * - Используется при отсутствии роли GUEST в БД
+ * - Пользователь не создаётся, транзакция откатывается
+ * - Сообщение на русском языке
+ *
+ * @see docs/user-stories/US-01-автоматическое-назначение-роли-GUEST-при-регистрации.md — AC-5
+ */
+import { BusinessRuleError } from '@/shared/errors/index';
+
+export class GuestRoleMissingError extends BusinessRuleError {
+  constructor() {
+    super('Системная роль GUEST не найдена. Регистрация невозможна. Обратитесь к администратору.');
+  }
+}

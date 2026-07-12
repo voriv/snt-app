@@ -4,7 +4,7 @@
  * @description Реализация репозиториев через Prisma Client
  *
  * @spec
- * - Использует singleton Prisma Client из infrastructure/prisma/client.ts
+ * - Использует DI для Prisma Client (принимает опциональный клиент для тестов)
  * - Маппит Prisma-модели (snake_case через @map) → доменные типы (camelCase)
  * - Prisma P2002 → доменные ошибки Duplicate преобразуются на уровне сервиса
  * - Прямой импорт Prisma Client только в этом файле (MODEL.md §8)
@@ -12,7 +12,8 @@
  * @see src/domains/roles/roles.repository.interface.ts — интерфейсы
  * @see prisma/schema.prisma — Prisma-модели
  */
-import { prisma } from '@/infrastructure/prisma/client';
+import type { PrismaClient } from '@prisma/client';
+import { prisma as defaultPrisma } from '@/infrastructure/prisma/client';
 import type {
   IRoleRepository,
   IPageRepository,
@@ -45,25 +46,31 @@ import type { UserData } from '@/domains/auth/auth.types';
  * - countSuperAdmins: ищет роль с name='SUPER_ADMIN' и считает записи в user_roles
  */
 export class RoleRepository implements IRoleRepository {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma || defaultPrisma;
+  }
+
   async findAll(): Promise<Role[]> {
-    const roles = await prisma.role.findMany({
+    const roles = await this.prisma.role.findMany({
       orderBy: { name: 'asc' },
     });
     return roles.map(this.mapRole);
   }
 
   async findById(id: string): Promise<Role | null> {
-    const role = await prisma.role.findUnique({ where: { id } });
+    const role = await this.prisma.role.findUnique({ where: { id } });
     return role ? this.mapRole(role) : null;
   }
 
   async findByName(name: string): Promise<Role | null> {
-    const role = await prisma.role.findUnique({ where: { name } });
+    const role = await this.prisma.role.findUnique({ where: { name } });
     return role ? this.mapRole(role) : null;
   }
 
   async create(data: CreateRoleInput): Promise<Role> {
-    const role = await prisma.role.create({
+    const role = await this.prisma.role.create({
       data: {
         name: data.name,
         description: data.description ?? null,
@@ -74,7 +81,7 @@ export class RoleRepository implements IRoleRepository {
   }
 
   async update(id: string, data: UpdateRoleInput): Promise<Role> {
-    const role = await prisma.role.update({
+    const role = await this.prisma.role.update({
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
@@ -85,11 +92,11 @@ export class RoleRepository implements IRoleRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.role.delete({ where: { id } });
+    await this.prisma.role.delete({ where: { id } });
   }
 
   async findUsersByRoleId(roleId: string): Promise<UserData[]> {
-    const userRoles = await prisma.userRole.findMany({
+    const userRoles = await this.prisma.userRole.findMany({
       where: { roleId },
       include: {
         user: {
@@ -117,7 +124,7 @@ export class RoleRepository implements IRoleRepository {
     if (trimmed.length < 2) {
       return [];
     }
-    const users = await prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         OR: [
           { email: { contains: trimmed, mode: 'insensitive' } },
@@ -138,7 +145,7 @@ export class RoleRepository implements IRoleRepository {
   }
 
   async findRolesByUserId(userId: string): Promise<Role[]> {
-    const userRoles = await prisma.userRole.findMany({
+    const userRoles = await this.prisma.userRole.findMany({
       where: { userId },
       include: { role: true },
     });
@@ -146,7 +153,7 @@ export class RoleRepository implements IRoleRepository {
   }
 
   async addUserToRole(userId: string, roleId: string): Promise<void> {
-    await prisma.userRole.upsert({
+    await this.prisma.userRole.upsert({
       where: { userId_roleId: { userId, roleId } },
       create: { userId, roleId },
       update: {},
@@ -154,13 +161,13 @@ export class RoleRepository implements IRoleRepository {
   }
 
   async removeUserFromRole(userId: string, roleId: string): Promise<void> {
-    await prisma.userRole.deleteMany({
+    await this.prisma.userRole.deleteMany({
       where: { userId, roleId },
     });
   }
 
   async countSuperAdmins(): Promise<number> {
-    const superAdminRole = await prisma.role.findUnique({
+    const superAdminRole = await this.prisma.role.findUnique({
       where: { name: 'SUPER_ADMIN' },
       select: { id: true },
     });
@@ -169,7 +176,7 @@ export class RoleRepository implements IRoleRepository {
       return 0;
     }
 
-    const count = await prisma.userRole.count({
+    const count = await this.prisma.userRole.count({
       where: { roleId: superAdminRole.id },
     });
     return count;
@@ -201,25 +208,31 @@ export class RoleRepository implements IRoleRepository {
  * @description Реализация IPageRepository через Prisma Client
  */
 export class PageRepository implements IPageRepository {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma || defaultPrisma;
+  }
+
   async findAll(): Promise<Page[]> {
-    const pages = await prisma.page.findMany({
+    const pages = await this.prisma.page.findMany({
       orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
     });
     return pages.map(this.mapPage);
   }
 
   async findById(id: string): Promise<Page | null> {
-    const page = await prisma.page.findUnique({ where: { id } });
+    const page = await this.prisma.page.findUnique({ where: { id } });
     return page ? this.mapPage(page) : null;
   }
 
   async findByPath(path: string): Promise<Page | null> {
-    const page = await prisma.page.findUnique({ where: { path } });
+    const page = await this.prisma.page.findUnique({ where: { path } });
     return page ? this.mapPage(page) : null;
   }
 
   async create(data: CreatePageInput): Promise<Page> {
-    const page = await prisma.page.create({
+    const page = await this.prisma.page.create({
       data: {
         path: data.path,
         title: data.title,
@@ -232,7 +245,7 @@ export class PageRepository implements IPageRepository {
   }
 
   async update(id: string, data: UpdatePageInput): Promise<Page> {
-    const page = await prisma.page.update({
+    const page = await this.prisma.page.update({
       where: { id },
       data: {
         ...(data.path !== undefined && { path: data.path }),
@@ -246,7 +259,7 @@ export class PageRepository implements IPageRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.page.delete({ where: { id } });
+    await this.prisma.page.delete({ where: { id } });
   }
 
   /** Маппинг Prisma Page → доменный Page */
@@ -285,8 +298,14 @@ export class PageRepository implements IPageRepository {
  * - unassignPageFromRole: deleteMany (идемпотентно, не бросает ошибку если записи нет)
  */
 export class RolePageRepository implements IRolePageRepository {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma || defaultPrisma;
+  }
+
   async findPagesByRoleId(roleId: string): Promise<Page[]> {
-    const rolePages = await prisma.rolePage.findMany({
+    const rolePages = await this.prisma.rolePage.findMany({
       where: { roleId },
       include: {
         page: true,
@@ -307,7 +326,7 @@ export class RolePageRepository implements IRolePageRepository {
   }
 
   async findRolesByPageId(pageId: string): Promise<Role[]> {
-    const rolePages = await prisma.rolePage.findMany({
+    const rolePages = await this.prisma.rolePage.findMany({
       where: { pageId },
       include: { role: true },
     });
@@ -322,7 +341,7 @@ export class RolePageRepository implements IRolePageRepository {
   }
 
   async assignPageToRole(roleId: string, pageId: string): Promise<void> {
-    await prisma.rolePage.upsert({
+    await this.prisma.rolePage.upsert({
       where: { roleId_pageId: { roleId, pageId } },
       create: { roleId, pageId },
       update: {},
@@ -330,13 +349,13 @@ export class RolePageRepository implements IRolePageRepository {
   }
 
   async unassignPageFromRole(roleId: string, pageId: string): Promise<void> {
-    await prisma.rolePage.deleteMany({
+    await this.prisma.rolePage.deleteMany({
       where: { roleId, pageId },
     });
   }
 
   async unassignAllPagesFromRole(roleId: string): Promise<void> {
-    await prisma.rolePage.deleteMany({
+    await this.prisma.rolePage.deleteMany({
       where: { roleId },
     });
   }
@@ -348,27 +367,33 @@ export class RolePageRepository implements IRolePageRepository {
  * @description Реализация IApiEndpointRepository через Prisma Client
  */
 export class ApiEndpointRepository implements IApiEndpointRepository {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma || defaultPrisma;
+  }
+
   async findAll(): Promise<ApiEndpoint[]> {
-    const endpoints = await prisma.apiEndpoint.findMany({
+    const endpoints = await this.prisma.apiEndpoint.findMany({
       orderBy: [{ method: 'asc' }, { path: 'asc' }],
     });
     return endpoints.map(this.mapEndpoint);
   }
 
   async findById(id: string): Promise<ApiEndpoint | null> {
-    const endpoint = await prisma.apiEndpoint.findUnique({ where: { id } });
+    const endpoint = await this.prisma.apiEndpoint.findUnique({ where: { id } });
     return endpoint ? this.mapEndpoint(endpoint) : null;
   }
 
   async findByMethodAndPath(method: string, path: string): Promise<ApiEndpoint | null> {
-    const endpoint = await prisma.apiEndpoint.findUnique({
+    const endpoint = await this.prisma.apiEndpoint.findUnique({
       where: { method_path: { method, path } },
     });
     return endpoint ? this.mapEndpoint(endpoint) : null;
   }
 
   async create(data: CreateApiEndpointInput): Promise<ApiEndpoint> {
-    const endpoint = await prisma.apiEndpoint.create({
+    const endpoint = await this.prisma.apiEndpoint.create({
       data: {
         method: data.method,
         path: data.path,
@@ -381,7 +406,7 @@ export class ApiEndpointRepository implements IApiEndpointRepository {
   }
 
   async update(id: string, data: UpdateApiEndpointInput): Promise<ApiEndpoint> {
-    const endpoint = await prisma.apiEndpoint.update({
+    const endpoint = await this.prisma.apiEndpoint.update({
       where: { id },
       data: {
         ...(data.method !== undefined && { method: data.method }),
@@ -395,7 +420,7 @@ export class ApiEndpointRepository implements IApiEndpointRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.apiEndpoint.delete({ where: { id } });
+    await this.prisma.apiEndpoint.delete({ where: { id } });
   }
 
   /** Маппинг Prisma ApiEndpoint → доменный ApiEndpoint */
@@ -432,8 +457,14 @@ export class ApiEndpointRepository implements IApiEndpointRepository {
  * - unassignEndpointFromRole: deleteMany (идемпотентно)
  */
 export class RoleApiEndpointRepository implements IRoleApiEndpointRepository {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma || defaultPrisma;
+  }
+
   async findEndpointsByRoleId(roleId: string): Promise<ApiEndpoint[]> {
-    const roleEndpoints = await prisma.roleApiEndpoint.findMany({
+    const roleEndpoints = await this.prisma.roleApiEndpoint.findMany({
       where: { roleId },
       include: { apiEndpoint: true },
       orderBy: { apiEndpoint: { method: 'asc' } },
@@ -451,7 +482,7 @@ export class RoleApiEndpointRepository implements IRoleApiEndpointRepository {
   }
 
   async findRolesByEndpointId(endpointId: string): Promise<Role[]> {
-    const roleEndpoints = await prisma.roleApiEndpoint.findMany({
+    const roleEndpoints = await this.prisma.roleApiEndpoint.findMany({
       where: { apiEndpointId: endpointId },
       include: { role: true },
     });
@@ -466,7 +497,7 @@ export class RoleApiEndpointRepository implements IRoleApiEndpointRepository {
   }
 
   async assignEndpointToRole(roleId: string, endpointId: string): Promise<void> {
-    await prisma.roleApiEndpoint.upsert({
+    await this.prisma.roleApiEndpoint.upsert({
       where: { roleId_apiEndpointId: { roleId, apiEndpointId: endpointId } },
       create: { roleId, apiEndpointId: endpointId },
       update: {},
@@ -474,13 +505,13 @@ export class RoleApiEndpointRepository implements IRoleApiEndpointRepository {
   }
 
   async unassignEndpointFromRole(roleId: string, endpointId: string): Promise<void> {
-    await prisma.roleApiEndpoint.deleteMany({
+    await this.prisma.roleApiEndpoint.deleteMany({
       where: { roleId, apiEndpointId: endpointId },
     });
   }
 
   async unassignAllEndpointsFromRole(roleId: string): Promise<void> {
-    await prisma.roleApiEndpoint.deleteMany({
+    await this.prisma.roleApiEndpoint.deleteMany({
       where: { roleId },
     });
   }

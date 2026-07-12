@@ -124,7 +124,7 @@ export function PageForm({
         }}
         disabled={isLoading}
         error={pathError ?? undefined}
-        placeholder="/dashboard/members"
+        placeholder="/dashboard/plots"
         required
       />
       <Input

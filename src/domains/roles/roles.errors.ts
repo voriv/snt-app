@@ -9,15 +9,29 @@
  *
  * @see docs/user-stories/US-8-roles-management.md — секция «Обработка ошибок»
  */
-import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '@/shared/errors/index';
+import { NotFoundError, ConflictError, ForbiddenError, ValidationError, BusinessRuleError } from '@/shared/errors/index';
+
+/**
+ * @class GuestRoleNotFoundError
+ * @domain roles
+ * @description Системная роль GUEST не найдена в БД — регистрация невозможна
+ * @throws HTTP 500
+ */
+export class GuestRoleNotFoundError extends BusinessRuleError {
+  readonly name = 'GuestRoleNotFoundError';
+  constructor() {
+    super('Системная роль GUEST не найдена в базе данных. Обратитесь к администратору.');
+  }
+}
 
 /**
  * @class RoleNotFoundError
  * @description Роль не найдена — HTTP 404
  */
 export class RoleNotFoundError extends NotFoundError {
+  readonly name = 'RoleNotFoundError';
   constructor(id: string) {
-    super(id, id);
+    super('Role', id, 'ROLE_NOT_FOUND');
   }
 }
 
@@ -66,8 +80,9 @@ export class RoleInvalidDataError extends ValidationError {
  * @description Страница не найдена — HTTP 404
  */
 export class PageNotFoundError extends NotFoundError {
+  readonly name = 'PageNotFoundError';
   constructor(id: string) {
-    super(id, id);
+    super('Page', id, 'PAGE_NOT_FOUND');
   }
 }
 
@@ -96,8 +111,9 @@ export class PageInvalidDataError extends ValidationError {
  * @description API endpoint не найден — HTTP 404
  */
 export class ApiEndpointNotFoundError extends NotFoundError {
+  readonly name = 'ApiEndpointNotFoundError';
   constructor(id: string) {
-    super(id, id);
+    super('ApiEndpoint', id, 'API_ENDPOINT_NOT_FOUND');
   }
 }
 

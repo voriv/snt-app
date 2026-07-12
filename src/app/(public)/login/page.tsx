@@ -1,30 +1,31 @@
-'use client';
-
-import { useSearchParams } from 'next/navigation';
-import LoginFormDataComponent from './page.client';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+import PageClient from './page.client';
 
 /**
  * @page /login
- * @description Страница входа в систему для авторизованных пользователей
+ * @auth none
+ * @description Страница входа в систему для неавторизованных пользователей
  *
  * @spec
- * - Client Component: использует useSearchParams для чтения URL параметров
- * - Извлекает callbackUrl и registered из URL search parameters
- * - Передает данные в LoginFormDataComponent
- * - Поддержка callbackUrl: после успешной авторизации перенаправление на исходную страницу
- * - Поддержка flash-сообщения: отображение при registered=true query параметре
+ * - Публичная страница: не требует авторизации
+ * - Проверка сессии: если пользователь уже авторизован — редирект на /dashboard
+ * - Обработанные состояния: loading, error (через AuthLayout)
+ * - Redirect авторизованного пользователя: при наличии валидной сессии — редирект на dashboard
  *
  * @data-flow
- * - URL with search params (callbackUrl, registered) → useSearchParams() → LoginFormDataComponent
+ * - auth() → проверка авторизации → редирект или рендер PageClient
  *
- * @see docs/user-stories/US-3-authentication.md
+ * @see docs/user-stories/US-04-реализация-страницы-входа-login.md
  */
-export default function LoginPage() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
-  const isRegistered = searchParams?.get('registered') === 'true';
+export default async function LoginPage() {
+  // Проверка авторизации через серверную сессию
+  const session = await auth();
 
-  return (
-    <LoginFormDataComponent callbackUrl={callbackUrl} isRegistered={isRegistered} />
-  );
+  // Редирект авторизованного пользователя на dashboard
+  if (session) {
+    redirect('/dashboard');
+  }
+
+  return <PageClient />;
 }

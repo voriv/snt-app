@@ -1,0 +1,212 @@
+
+> snt-app@0.1.0 test
+> vitest run plots.test.ts --run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mc:/git/snt-app[39m
+
+ [31m❯[39m tests/api/plots.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m13 failed[39m[2m)[22m[32m 36[2mms[22m[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return 200 with plots array when authorized as ADMIN[39m[32m 21[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return 401 without auth[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return 403 for MEMBER role[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return plots with correct structure[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould create a plot and return 201[39m[32m 2[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when plotNumber is empty[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is missing[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is negative[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is zero[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 409 when plotNumber already exists[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 401 without auth[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 403 for MEMBER role[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould handle server error and return 500[39m[32m 1[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 13 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return 200 with plots array when authorized as ADMIN
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m148:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return 401 without auth
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m163:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return 403 for MEMBER role
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m188:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return plots with correct structure
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m228:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould create a plot and return 201
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m286:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when plotNumber is empty
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m324:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is missing
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m354:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is negative
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m385:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is zero
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m416:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 409 when plotNumber already exists
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m452:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 401 without auth
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m470:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 403 for MEMBER role
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m505:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould handle server error and return 500
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'resolveEndpoint')[39m
+[36m [2m❯[22m Module.<anonymous> src/app/api/v1/_shared/with-role-guard.ts:[2m86:42[22m[39m
+    [90m 84| [39m    [90m// Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)[39m
+    [90m 85| [39m    // resolveEndpoint использует matchPath для сопоставления шаблона …
+    [90m 86| [39m    const endpoint = await accessService.resolveEndpoint(options.metho…
+    [90m   | [39m                                         [31m^[39m
+    [90m 87| [39m
+    [90m 88| [39m    [90m// Если endpoint не найден или is_active=false → 403 Forbidden[39m
+[90m [2m❯[22m tests/api/plots.test.ts:[2m542:28[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m13 failed[39m[22m[90m (13)[39m
+[2m   Start at [22m 11:43:20
+[2m   Duration [22m 4.19s[2m (transform 206ms, setup 1.11s, collect 426ms, tests 36ms, environment 0ms, prepare 240ms)[22m
+

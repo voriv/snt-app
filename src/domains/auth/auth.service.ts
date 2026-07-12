@@ -5,14 +5,15 @@
  *
  * @spec
  * - Валидация: через Zod-схемы из auth.validators.ts
- * - Ошибки: UserDuplicateError, UserInvalidDataError, InvalidCredentialsError
+ * - Ошибки: GuestRoleMissingError, UserDuplicateError, UserInvalidDataError, InvalidCredentialsError
  * - Зависимости: IAuthRepository через DI
  */
 import type { IAuthRepository } from './auth.repository.interface';
 import { AuthRepository } from './auth.repository.prisma';
 import type { RegisterData, UserData, LoginData, UserWithPassword } from './auth.types';
 import { registerSchema, loginSchema } from './auth.validators';
-import { UserDuplicateError, UserInvalidDataError, InvalidCredentialsError } from './auth.errors';
+import { GuestRoleMissingError, UserDuplicateError, UserInvalidDataError, InvalidCredentialsError } from './auth.errors';
+import { ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
 
 /** Количество раундов salt для bcrypt */
@@ -29,6 +30,7 @@ export class AuthService {
    *
    * @param data - Данные регистрации: email, password, confirmPassword
    * @returns Созданный пользователь без пароля
+   * @throws {GuestRoleMissingError} если роль GUEST отсутствует в БД
    * @throws {UserInvalidDataError} при ошибке валидации
    * @throws {UserDuplicateError} если email уже зарегистрирован
    *
@@ -37,12 +39,15 @@ export class AuthService {
    * - Шаг 2: Приведение email к нижнему регистру и обрезка пробелов
    * - Шаг 3: Хеширование пароля через bcrypt.hash — salt rounds = 10
    * - Шаг 4: Проверка уникальности email через repository.findByEmail
-   * - Шаг 5: Создание пользователя через repository.create (роль GUEST назначается в репозитории, US-8)
+   * - Шаг 5: Создание пользователя через repository.create (роль GUEST назначается в репозитории в транзакции)
    * - При нарушении уникальности email на уровне БД — преобразует в UserDuplicateError
+   * - При отсутствии роли GUEST — выбрасывает GuestRoleMissingError (AC-5, US-01)
+   * - Транзакция откатывается полностью — пользователь без роли не создаётся
    * - При любой другой ошибке — UserInvalidDataError
    * - Пароль никогда не возвращается в ответе
    *
    * @see docs/user-stories/US-2-registration.md — FR-4..FR-7
+   * @see docs/user-stories/US-01-автоматическое-назначение-роли-GUEST-при-регистрации.md — AC-1..AC-5
    */
   async registerUser(data: unknown): Promise<UserData> {
     try {
@@ -58,14 +63,14 @@ export class AuthService {
         throw new UserDuplicateError(email);
       }
 
-      // Создание пользователя (роль GUEST назначается в репозитории, US-8)
+      // Создание пользователя с автоматическим назначением роли GUEST (US-01)
       return this.repository.create({
         email,
         passwordHash,
         name: null,
       });
     } catch (error) {
-      if (error instanceof UserDuplicateError || error instanceof UserInvalidDataError) {
+      if (error instanceof GuestRoleMissingError || error instanceof UserDuplicateError || error instanceof UserInvalidDataError) {
         throw error;
       }
 
@@ -82,8 +87,8 @@ export class AuthService {
    *
    * @param data - Данные входа: email и password
    * @returns UserData при успешной верификации
-   * @throws {InvalidCredentialsError} если пользователь не найден или пароль неверный
-   * @throws {UserInvalidDataError} при ошибке валидации
+   * @throws {InvalidCredentialsError} если пользователь не найден или пароль неверный (HTTP 401)
+   * @throws {UserInvalidDataError} при ошибке валидации формата полей (HTTP 400)
    *
    * @spec
    * - Шаг 1: Валидация данных через loginSchema — Zod
@@ -94,6 +99,10 @@ export class AuthService {
    * - Шаг 6: Если пароль неверный — InvalidCredentialsError — общее сообщение
    * - Возвращает UserData без пароля — пароль никогда не покидает метод
    * - Безопасность: одинаковое сообщение для «email не найден» и «пароль неверный»
+   * - Разделение ошибок (AC-2.4, BR-03):
+   *   - Zod-ошибка формата → UserInvalidDataError с конкретным сообщением (HTTP 400)
+   *   - Неверные учётные данные → InvalidCredentialsError «Неверный email или пароль» (HTTP 401)
+   *   - Прочие ошибки (БД, bcrypt) → UserInvalidDataError «Ошибка при входе»
    *
    * @see docs/user-stories/US-3-authentication.md — FR-1, BR-3, BR-4, Edge Cases 1,2,7
    */
@@ -120,14 +129,19 @@ export class AuthService {
       const { passwordHash, ...userData } = user;
       return userData;
     } catch (error) {
+      // Доменные ошибки перебрасываются как есть
       if (error instanceof InvalidCredentialsError || error instanceof UserInvalidDataError) {
         throw error;
       }
 
-      if (error instanceof Error) {
-        throw new UserInvalidDataError('Ошибка при входе');
+      // Zod-ошибка валидации формата → UserInvalidDataError с конкретным сообщением (HTTP 400)
+      // AC-2.4: сообщение НЕ маскируется под «Неверный email или пароль» — это ошибка формата
+      if (error instanceof ZodError) {
+        const firstIssue = error.issues[0];
+        throw new UserInvalidDataError(firstIssue?.message ?? 'Некорректные данные');
       }
 
+      // Прочие ошибки (БД недоступна, сбой bcrypt и т.д.) → общая ошибка
       throw new UserInvalidDataError('Ошибка при входе');
     }
   }

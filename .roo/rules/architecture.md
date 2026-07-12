@@ -41,3 +41,16 @@ Whenever the user gives you a task, you MUST follow this mental loop:
 * **NO Spaghetti Code:** Functions must not exceed 50 lines of code. If a function is too long, break it down.
 * **NO Ghost Fixes:** Never modify code unrelated to the current specification or task.
 * **NO External Deps:** Do not install new npm/pip packages unless they are explicitly permitted in the specification file.
+
+---
+
+## 📊 ПРЕДОТВРАЩЕНИЕ РАСПРОСТРАНЁННЫХ ОШИБОК
+
+| Тип ошибки | Причина | Мера профилактики |
+|------------|---------|-------------------|
+| **Дублирование мутаций** | Логика в родительском и child-компоненте | Чёткое разделение ответственности: parent = state management, child = UI |
+| **Неправильное удаление** | Soft delete вместо физического | В JSDoc явно указывать тип удаления (`@spec - Удаляет запись физически`) |
+| **Ошибки 401 при редиректе** | Отсутствие задержки перед редиректом | Обязательная задержка `setTimeout(() => router.replace('/login'), 100)` |
+| **Неправильная проверка ролей** | Проверка одной роли вместо массива | Всегда использовать массив ролей `['ADMIN', 'SUPER_ADMIN']` |
+| **Вызов несуществующих методов** | Устаревшие ссылки на методы | Использовать TypeScript strict mode, проверять компиляцию |
+| **Дублирование подтверждения** | Multiple `window.confirm` | Использовать единый ConfirmModal компонент |

@@ -68,9 +68,21 @@ const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  // Session strategy - JWT по умолчанию
+  /**
+   * Session strategy — JWT с сроком жизни 24 часа (OQ-5).
+   *
+   * @spec
+   * - strategy: jwt — сессия хранится в подписанном JWT-cookie, не в БД
+   * - maxAge: 86400 секунд (24 часа) — баланс безопасности и UX
+   * - Session обновляется только при повторном входе (logout + login).
+   *   При изменении ролей в БД старая сессия остаётся валидной до истечения maxAge.
+   *   Для немедленного применения смены ролей требуется logout + повторный вход (OQ-4).
+   *
+   * @see docs/user-stories/US-05-реализация-процесса-аутентификации.md — OQ-4, OQ-5, EC-13
+   */
   session: {
     strategy: 'jwt' as const,
+    maxAge: 24 * 60 * 60, // 24 часа
   },
 };
 

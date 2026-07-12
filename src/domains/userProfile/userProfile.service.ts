@@ -17,6 +17,8 @@ import type {
 } from './userProfile.types';
 import { userProfileUpdateSchema, avatarFileSchema, updateThemeSchema } from './userProfile.validators';
 import { ZodError } from 'zod';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * @service UserProfileService
@@ -190,49 +192,82 @@ export class UserProfileService {
     return updatedTheme;
   }
 
-  /**
-   * Загрузить/обновить аватар пользователя
-   * @param userId - ID текущего пользователя
-   * @param file - Файл аватара
-   * @returns URL загруженного аватара
-   * @throws {FileTooLargeError} если размер файла > 5MB
-   * @throws {UnsupportedFileTypeError} если формат не поддерживается
-   */
-  async uploadAvatar(
-    userId: string,
-    file: { size: number; mimetype: string; buffer: Buffer }
-  ): Promise<UploadAvatarResult> {
-    // Проверка размера файла
-    const fileSizeValidation = avatarFileSchema.pick({ fileSize: true }).safeParse({
-      fileSize: file.size,
-    });
+ /**
+  * Загрузить/обновить аватар пользователя
+  * @param userId - ID текущего пользователя
+  * @param file - Файл аватара
+  * @returns URL загруженного аватара
+  * @throws {FileTooLargeError} если размер файла > 5MB
+  * @throws {UnsupportedFileTypeError} если формат не поддерживается
+  *
+  * @spec
+  * - Сохраняет файл в public/uploads/avatars/
+  * - Генерирует уникальный URL с timestamp
+  * - Обновляет профиль пользователя новым URL
+  * - Удаляет старый аватар при обновлении
+  */
+ async uploadAvatar(
+   userId: string,
+   file: { size: number; mimetype: string; buffer: Buffer }
+ ): Promise<UploadAvatarResult> {
+   // Проверка размера файла
+   const fileSizeValidation = avatarFileSchema.pick({ fileSize: true }).safeParse({
+     fileSize: file.size,
+   });
 
-    if (!fileSizeValidation.success) {
-      throw new FileTooLargeError(file.size, 5 * 1024 * 1024);
-    }
+   if (!fileSizeValidation.success) {
+     throw new FileTooLargeError(file.size, 5 * 1024 * 1024);
+   }
 
-    // Проверка MIME type
-    const fileTypeValidation = avatarFileSchema.pick({ fileType: true }).safeParse({
-      fileType: file.mimetype,
-    });
+   // Проверка MIME type
+   const fileTypeValidation = avatarFileSchema.pick({ fileType: true }).safeParse({
+     fileType: file.mimetype,
+   });
 
-    if (!fileTypeValidation.success) {
-      throw new UnsupportedFileTypeError(file.mimetype, [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-      ]);
-    }
+   if (!fileTypeValidation.success) {
+     throw new UnsupportedFileTypeError(file.mimetype, [
+       'image/jpeg',
+       'image/png',
+       'image/gif',
+     ]);
+   }
 
-    // TODO: Сохранить файл в хранилище (S3/file system)
-    // TODO: Обрезать изображение до 512x512
-    // TODO: Обновить профиль
+   // Генерация уникального имени файла
+   const fileExtension = file.mimetype.split('/').pop();
+   const timestamp = Date.now();
+   const fileName = `${userId}-${timestamp}.${fileExtension}`;
+   const avatarUrl = `/uploads/avatars/${fileName}`;
 
-    // Для текущей реализации - используем placeholder
-    return {
-      avatarUrl: '/placeholder-avatar.jpg', // TODO: Реальный URL
-    };
-  }
+   // Сохранение файла на диск
+   // В продакшене использовать S3 или другое облачное хранилище
+   const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
+   await fs.mkdir(uploadsDir, { recursive: true });
+
+   // Удаляем старый аватар (если есть)
+   const existingProfile = await this.repository.findByUserId(userId);
+   if (existingProfile?.avatar) {
+     const oldFileName = existingProfile.avatar.split('/').pop();
+     if (oldFileName) {
+       const oldFilePath = path.join(uploadsDir, oldFileName);
+       try {
+         await fs.unlink(oldFilePath);
+       } catch {
+         // Игнорируем ошибку удаления старого файла — он может не существовать
+       }
+     }
+   }
+
+   // Сохраняем новый файл
+   const filePath = path.join(uploadsDir, fileName);
+   await fs.writeFile(filePath, file.buffer);
+
+   // Обновляем профиль пользователя новым URL аватара
+   await this.updateAvatar(userId, avatarUrl);
+
+   return {
+     avatarUrl,
+   };
+ }
 
   /**
    * Обновить аватар пользователя (сохранить URL в профиль)

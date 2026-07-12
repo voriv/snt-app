@@ -103,8 +103,7 @@ const SEED_PAGES = [
   { path: '/register', title: 'Регистрация', groupName: 'Публичное', sortOrder: 10, accessType: 'public', isActive: true },
   { path: '/forbidden', title: 'Доступ запрещён', groupName: 'Публичное', sortOrder: 20, accessType: 'public', isActive: true },
   { path: '/dashboard', title: 'Дашборд', groupName: 'Основное', sortOrder: 0, accessType: 'role', isActive: true },
-  { path: '/dashboard/members', title: 'Члены СНТ', groupName: 'Основное', sortOrder: 10, accessType: 'role', isActive: true },
-  { path: '/dashboard/plots', title: 'Участки', groupName: 'Основное', sortOrder: 20, accessType: 'role', isActive: true },
+  { path: '/dashboard/plots', title: 'Участки', groupName: 'Основное', sortOrder: 10, accessType: 'role', isActive: true },
   { path: '/dashboard/profile', title: 'Профиль', groupName: 'Личное', sortOrder: 100, accessType: 'owner', isActive: true },
   { path: '/dashboard/roles', title: 'Управление ролями', groupName: 'Администрирование', sortOrder: 200, accessType: 'super_admin', isActive: true },
 ];
@@ -118,126 +117,206 @@ const SEED_API_ENDPOINTS = [
   { method: 'POST', path: '/profile', accessType: 'owner', description: 'Создание/обновление аватара профиля' },
   { method: 'DELETE', path: '/profile', accessType: 'owner', description: 'Удаление аватара профиля' },
   { method: 'PATCH', path: '/profile/theme', accessType: 'owner', description: 'Смена темы пользователя' },
-  { method: 'GET', path: '/members', accessType: 'role', description: 'Список членов СНТ' },
-  { method: 'POST', path: '/members', accessType: 'role', description: 'Создание члена СНТ' },
-  { method: 'GET', path: '/members/:id', accessType: 'role', description: 'Просмотр члена СНТ' },
-  { method: 'PUT', path: '/members/:id', accessType: 'role', description: 'Редактирование члена СНТ' },
-  { method: 'DELETE', path: '/members/:id', accessType: 'role', description: 'Удаление члена СНТ' },
   { method: 'GET', path: '/plots', accessType: 'role', description: 'Список участков' },
   { method: 'POST', path: '/plots', accessType: 'role', description: 'Создание участка' },
+  { method: 'GET', path: '/plots/:id', accessType: 'role', description: 'Просмотр участка' },
+  { method: 'PATCH', path: '/plots/:id', accessType: 'role', description: 'Редактирование участка' },
+  { method: 'DELETE', path: '/plots/:id', accessType: 'role', description: 'Удаление участка' },
+  // Roles management
   { method: 'GET', path: '/roles', accessType: 'super_admin', description: 'Список ролей' },
-  { method: 'POST', path: '/roles', accessType: 'super_admin', description: 'Создать роль' },
-  { method: 'GET', path: '/roles/:id', accessType: 'super_admin', description: 'Получить роль' },
-  { method: 'PATCH', path: '/roles/:id', accessType: 'super_admin', description: 'Обновить роль' },
-  { method: 'DELETE', path: '/roles/:id', accessType: 'super_admin', description: 'Удалить роль' },
-  { method: 'GET', path: '/roles/:id/users', accessType: 'super_admin', description: 'Участники роли' },
-  { method: 'POST', path: '/roles/:id/users', accessType: 'super_admin', description: 'Добавить участника' },
-  { method: 'DELETE', path: '/roles/:id/users/:userId', accessType: 'super_admin', description: 'Исключить участника' },
-  { method: 'GET', path: '/roles/:id/pages', accessType: 'super_admin', description: 'Страницы роли' },
-  { method: 'POST', path: '/roles/:id/pages', accessType: 'super_admin', description: 'Назначить страницу' },
-  { method: 'DELETE', path: '/roles/:id/pages/:pageId', accessType: 'super_admin', description: 'Снять страницу' },
-  { method: 'GET', path: '/roles/:id/api-endpoints', accessType: 'super_admin', description: 'API endpoints роли' },
-  { method: 'POST', path: '/roles/:id/api-endpoints', accessType: 'super_admin', description: 'Назначить API endpoint' },
-  { method: 'DELETE', path: '/roles/:id/api-endpoints/:endpointId', accessType: 'super_admin', description: 'Снять API endpoint' },
+  { method: 'POST', path: '/roles', accessType: 'super_admin', description: 'Создание роли' },
+  { method: 'GET', path: '/roles/:id', accessType: 'super_admin', description: 'Просмотр роли' },
+  { method: 'PATCH', path: '/roles/:id', accessType: 'super_admin', description: 'Редактирование роли' },
+  { method: 'DELETE', path: '/roles/:id', accessType: 'super_admin', description: 'Удаление роли' },
+  { method: 'PATCH', path: '/roles/:id/pages', accessType: 'super_admin', description: 'Назначение страниц роли' },
+  { method: 'DELETE', path: '/roles/:id/pages/:pageId', accessType: 'super_admin', description: 'Отзыв страницы у роли' },
+  { method: 'PATCH', path: '/roles/:id/api-endpoints', accessType: 'super_admin', description: 'Назначение API endpoints роли' },
+  { method: 'DELETE', path: '/roles/:id/api-endpoints/:apiEndpointId', accessType: 'super_admin', description: 'Отзыв API endpoint у роли' },
+  // Pages management
   { method: 'GET', path: '/pages', accessType: 'super_admin', description: 'Список страниц' },
-  { method: 'POST', path: '/pages', accessType: 'super_admin', description: 'Создать страницу' },
-  { method: 'PATCH', path: '/pages/:id', accessType: 'super_admin', description: 'Обновить страницу' },
-  { method: 'DELETE', path: '/pages/:id', accessType: 'super_admin', description: 'Удалить страницу' },
+  { method: 'POST', path: '/pages', accessType: 'super_admin', description: 'Создание страницы' },
+  { method: 'GET', path: '/pages/:id', accessType: 'super_admin', description: 'Просмотр страницы' },
+  { method: 'PATCH', path: '/pages/:id', accessType: 'super_admin', description: 'Редактирование страницы' },
+  { method: 'DELETE', path: '/pages/:id', accessType: 'super_admin', description: 'Удаление страницы' },
+  // API Endpoints management
   { method: 'GET', path: '/api-endpoints', accessType: 'super_admin', description: 'Список API endpoints' },
-  { method: 'POST', path: '/api-endpoints', accessType: 'super_admin', description: 'Создать endpoint' },
-  { method: 'PATCH', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Обновить endpoint' },
-  { method: 'DELETE', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Удалить endpoint' },
-  { method: 'GET', path: '/users', accessType: 'super_admin', description: 'Поиск пользователей для добавления в роль' },
+  { method: 'POST', path: '/api-endpoints', accessType: 'super_admin', description: 'Создание API endpoint' },
+  { method: 'GET', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Просмотр API endpoint' },
+  { method: 'PATCH', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Редактирование API endpoint' },
+  { method: 'DELETE', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Удаление API endpoint' },
+  // Users management
+  { method: 'GET', path: '/users', accessType: 'super_admin', description: 'Поиск пользователей' },
+  // Plot Users management
+  { method: 'GET', path: '/plot-users', accessType: 'role', description: 'Список связей пользователь-участок' },
+  { method: 'POST', path: '/plot-users', accessType: 'role', description: 'Создание связи пользователь-участок' },
+  { method: 'GET', path: '/plot-users/:id', accessType: 'role', description: 'Просмотр связи пользователь-участок' },
+  { method: 'PATCH', path: '/plot-users/:id', accessType: 'role', description: 'Редактирование связи пользователь-участок' },
+  { method: 'DELETE', path: '/plot-users/:id', accessType: 'role', description: 'Удаление связи пользователь-участок' },
+  { method: 'GET', path: '/plot-users/users', accessType: 'role', description: 'Список пользователей для формы связи' },
+  // Plot Participants management
+  { method: 'GET', path: '/plots/:id/participants', accessType: 'role', description: 'Список участников участка' },
+  { method: 'DELETE', path: '/plots/:id/participants/:participantId', accessType: 'role', description: 'Удаление участника из участка' },
 ];
 
+/**
+ * Основная функция сидирования
+ *
+ * @description Создаёт все системные данные: роли, страницы, API endpoints, первого пользователя
+ *
+ * @returns Promise<void>
+ *
+ * @spec
+ * - Создает роли через upsert
+ * - Создает страницы через upsert
+ * - Создает API endpoints через upsert
+ * - Создает начальную запись access_config_version
+ * - Вызывает createFirstSuperAdmin
+ */
 async function main() {
-  console.log('🌱 Seeding roles...');
-  const roleMap = new Map<string, string>();
-  for (const r of SEED_ROLES) {
-    const role = await prisma.role.upsert({
-      where: { name: r.name },
-      update: { description: r.description, isSystem: r.isSystem },
-      create: {
-        name: r.name,
-        description: r.description,
-        isSystem: r.isSystem,
-      },
+  console.log('🌱 Starting seeding...');
+  
+  // Создаём роли
+  console.log('Creating roles...');
+  for (const role of SEED_ROLES) {
+    await prisma.role.upsert({
+      where: { name: role.name },
+      update: {},
+      create: role,
     });
-    roleMap.set(r.name, role.id);
+    console.log(`  → Role created: ${role.name}`);
   }
-
-  console.log('🌱 Seeding pages...');
-  for (const p of SEED_PAGES) {
+  
+  // Создаём страницы
+  console.log('Creating pages...');
+  for (const page of SEED_PAGES) {
     await prisma.page.upsert({
-      where: { path: p.path },
-      update: {
-        title: p.title,
-        groupName: p.groupName,
-        sortOrder: p.sortOrder,
-        accessType: p.accessType,
-        isActive: p.isActive,
-      },
-      create: {
-        path: p.path,
-        title: p.title,
-        groupName: p.groupName,
-        sortOrder: p.sortOrder,
-        accessType: p.accessType,
-        isActive: p.isActive,
-      },
+      where: { path: page.path },
+      update: {},
+      create: page,
     });
+    console.log(`  → Page created: ${page.path}`);
   }
-
-  console.log('🌱 Seeding api_endpoints...');
-  for (const e of SEED_API_ENDPOINTS) {
-    const existing = await prisma.apiEndpoint.findFirst({
-      where: { method: e.method, path: e.path },
+  
+  // Создаём API endpoints
+  console.log('Creating API endpoints...');
+  for (const endpoint of SEED_API_ENDPOINTS) {
+    await prisma.apiEndpoint.upsert({
+      where: { method_path: { method: endpoint.method, path: endpoint.path } },
+      update: {},
+      create: endpoint,
     });
-    if (existing) {
-      await prisma.apiEndpoint.update({
-        where: { id: existing.id },
-        data: {
-          description: e.description,
-          accessType: e.accessType,
-          isActive: true,
+    console.log(`  → API endpoint created: ${endpoint.method} ${endpoint.path}`);
+  }
+  
+  // Назначаем SUPER_ADMIN все страницы и API endpoints
+  console.log('Assigning pages and API endpoints to SUPER_ADMIN...');
+  const superAdminRole = await prisma.role.findUnique({
+    where: { name: 'SUPER_ADMIN' },
+  });
+  
+  if (superAdminRole) {
+    // Получаем все страницы и назначаем SUPER_ADMIN
+    const allPages = await prisma.page.findMany();
+    for (const page of allPages) {
+      await prisma.rolePage.upsert({
+        where: {
+          roleId_pageId: {
+            roleId: superAdminRole.id,
+            pageId: page.id,
+          },
         },
-      });
-    } else {
-      await prisma.apiEndpoint.create({
-        data: {
-          method: e.method,
-          path: e.path,
-          description: e.description,
-          accessType: e.accessType,
-          isActive: true,
+        update: {},
+        create: {
+          roleId: superAdminRole.id,
+          pageId: page.id,
         },
       });
     }
+    console.log(`  → Assigned ${allPages.length} pages to SUPER_ADMIN`);
+    
+    // Получаем все API endpoints и назначаем SUPER_ADMIN
+    const allApiEndpoints = await prisma.apiEndpoint.findMany();
+    for (const endpoint of allApiEndpoints) {
+      await prisma.roleApiEndpoint.upsert({
+        where: {
+          roleId_apiEndpointId: {
+            roleId: superAdminRole.id,
+            apiEndpointId: endpoint.id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: superAdminRole.id,
+          apiEndpointId: endpoint.id,
+        },
+      });
+    }
+    console.log(`  → Assigned ${allApiEndpoints.length} API endpoints to SUPER_ADMIN`);
+    
+    // Назначаем новые endpoints для role-based доступа (ADMIN, MEMBER)
+    console.log('Assigning role-based API endpoints to ADMIN and MEMBER roles...');
+    const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+    const memberRole = await prisma.role.findUnique({ where: { name: 'MEMBER' } });
+    
+    // Получаем все endpoints с accessType='role'
+    const roleBasedEndpoints = await prisma.apiEndpoint.findMany({
+      where: { accessType: 'role' },
+    });
+    
+    for (const endpoint of roleBasedEndpoints) {
+      // Назначаем ADMIN
+      if (adminRole) {
+        await prisma.roleApiEndpoint.upsert({
+          where: {
+            roleId_apiEndpointId: {
+              roleId: adminRole.id,
+              apiEndpointId: endpoint.id,
+            },
+          },
+          update: {},
+          create: {
+            roleId: adminRole.id,
+            apiEndpointId: endpoint.id,
+          },
+        });
+      }
+      // Назначаем MEMBER
+      if (memberRole) {
+        await prisma.roleApiEndpoint.upsert({
+          where: {
+            roleId_apiEndpointId: {
+              roleId: memberRole.id,
+              apiEndpointId: endpoint.id,
+            },
+          },
+          update: {},
+          create: {
+            roleId: memberRole.id,
+            apiEndpointId: endpoint.id,
+          },
+        });
+      }
+    }
+    console.log(`  → Assigned ${roleBasedEndpoints.length} role-based endpoints to ADMIN and MEMBER`);
   }
-
-  console.log('🌱 Seeding access_config_version...');
+  
+  // Создаём начальную запись access_config_version
   await prisma.accessConfigVersion.upsert({
     where: { id: 1 },
     update: {},
-    create: { id: 1, version: 0 },
+    create: { version: BigInt(1) },
   });
-
-  // Создаём первого пользователя SUPER_ADMIN
-  console.log('🌱 Creating first SUPER_ADMIN user...');
-  try {
-    const firstUser = await createFirstSuperAdmin();
-    console.log(`  → First user: ${firstUser.email} (id: ${firstUser.id})`);
-    console.log(`  → Password: admin123 (CHANGE IMMEDIATELY AFTER FIRST LOGIN)`);
-  } catch (error) {
-    console.error('  → Error creating first user:', error);
-  }
-
-  console.log('✅ Seed completed');
+  console.log('  → Access config version created');
+  
+  // Создаём первого супер-администратора
+  await createFirstSuperAdmin();
+  
+  console.log('🎉 Seeding completed!');
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Seed failed:', e);
+  .catch(e => {
+    console.error('❌ Seeding error:', e);
     process.exit(1);
   })
   .finally(async () => {

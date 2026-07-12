@@ -20,6 +20,7 @@
  * - Валидация в реальном времени (показывать ошибки при invalid)
  * - При отправке вызывает onSave с валидированными данными
  * - При нажатии Cancel вызывает onCancel без сохранения
+ * - Email отображается в disabled-режиме (AC-2.5)
  * - Индикатор загрузки при отправке формы
  * - Сообщения об успехе/ошибке через toast
  * - Доступность: aria-invalid, aria-describedby для ошибок
@@ -58,6 +59,10 @@ export interface UserProfileFormProps {
   onCancel: () => void;
   /** Показывать ли индикатор загрузки */
   isLoading?: boolean;
+  /** Email пользователя (для отображения в disabled-режиме, AC-2.5) */
+  email?: string;
+  /** Обработчик изменения данных формы (для отслеживания несохраненных изменений, AC-2.8) */
+  onChange?: (field: keyof UserProfileFormData, value: string) => void;
 }
 
 interface FormErrors {
@@ -74,6 +79,7 @@ interface FormErrors {
  * - Пустая строка или null - поле опционально, валидация пропускается (BR-1, BR-2)
  * - Если значение указано: firstName/lastName/middleName - минимум 2 символа (BR-3, BR-4)
  * - Пустая строка трансформируется в null (BR-14)
+ * - Биография - максимум 500 символов (AC-2.6)
  */
 const validateField = (name: string, value: string | null | undefined): string | undefined => {
   // Пустая строка или null - поле опционально, валидация пропускается (BR-1, BR-2)
@@ -98,6 +104,14 @@ const validateField = (name: string, value: string | null | undefined): string |
           : 'Отчество не может превышать 50 символов';
     }
   }
+  
+  // Для биографии проверяем максимум 500 символов (AC-2.6)
+  if (name === 'bio') {
+    if (value.length > 500) {
+      return 'Биография не может превышать 500 символов';
+    }
+  }
+  
   return undefined;
 };
 
@@ -106,13 +120,31 @@ export function UserProfileForm({
   onSave,
   onCancel,
   isLoading = false,
+  email,
+  onChange,
 }: UserProfileFormProps) {
   const [formData, setFormData] = useState<UserProfileFormData>(initialData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Проверка наличия изменений относительно начальных данных
+  const checkForChanges = useCallback((newData: UserProfileFormData) => {
+    const hasAnyChange =
+      (newData.firstName ?? '') !== (initialData.firstName ?? '') ||
+      (newData.lastName ?? '') !== (initialData.lastName ?? '') ||
+      (newData.middleName || '') !== (initialData.middleName || '') ||
+      (newData.phone || '') !== (initialData.phone || '') ||
+      (newData.bio || '') !== (initialData.bio || '');
+    setHasChanges(hasAnyChange);
+  }, [initialData]);
 
   const handleChange = useCallback((field: keyof UserProfileFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      checkForChanges(newData);
+      return newData;
+    });
     
     if (touchedFields.has(field)) {
       const error = validateField(field, value);
@@ -121,7 +153,12 @@ export function UserProfileForm({
         [field]: error,
       }));
     }
-  }, [touchedFields]);
+    
+    // Вызываем внешний обработчик для отслеживания изменений (AC-2.8)
+    if (onChange) {
+      onChange(field, value);
+    }
+  }, [touchedFields, onChange, checkForChanges]);
 
   const handleBlur = useCallback((field: string) => {
     setTouchedFields(prev => new Set(prev).add(field));
@@ -202,6 +239,25 @@ export function UserProfileForm({
               error={touchedFields.has('middleName') ? errors.middleName : undefined}
               aria-invalid={touchedFields.has('middleName') && !!errors.middleName}
             />
+            {email && (
+              <div className="w-full">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  aria-disabled="true"
+                  className="block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 px-3 py-2"
+                />
+                <p className="mt-1 text-xs text-gray-500">Email не редактируется</p>
+              </div>
+            )}
             <Input
               label="Телефон"
               id="phone"

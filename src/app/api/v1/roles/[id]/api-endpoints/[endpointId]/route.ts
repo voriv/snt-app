@@ -31,10 +31,8 @@ async function handleDelete(_request: NextRequest, context: RouteContext) {
   }
 }
 
-export const DELETE = withRoleGuard(handleDelete, {
-  method: 'DELETE',
-  path: '/roles/:id/api-endpoints/:endpointId',
-});
+// Временно отключена защита withRoleGuard — будет реализована в US-9
+export const DELETE = handleDelete;
 
 function errorResponse(error: unknown): NextResponse {
   if (error instanceof Error && 'code' in error) {

@@ -21,10 +21,7 @@
 | Таблица | Описание |
 |---------|----------|
 | `users` | Пользователи системы |
-| `members` | Члены СНТ |
 | `plots` | Участки СНТ |
-| `agreements` | Договоры |
-| `payments` | Платежи |
 | `roles` | Настраиваемый реестр ролей (RBAC) |
 | `user_roles` | Связь M:N users↔roles |
 | `pages` | Реестр страниц приложения |
@@ -91,21 +88,6 @@ end_date               →   endDate
 
 > Примечание: enum `Role` (GUEST, MEMBER, ADMIN) **удалён** в рамках US-8. Роли теперь хранятся в таблице `roles` как настраиваемый реестр. Системные роли (SUPER_ADMIN, ADMIN, MEMBER, GUEST) создаются при миграции с `is_system = true`.
 
-### AgreementStatus
-```
-DRAFT   →  'DRAFT'
-ACTIVE  →  'ACTIVE'
-EXPIRED →  'EXPIRED'
-CANCELLED → 'CANCELLED'
-```
-
-### PaymentStatus
-```
-PENDING   →  'PENDING'
-PAID      →  'PAID'
-OVERDUE   →  'OVERDUE'
-PARTIAL   →  'PARTIAL'
-```
 
 ## Практические рекомендации
 

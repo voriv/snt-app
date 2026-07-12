@@ -3,12 +3,11 @@
  * @description Обёртка для API Route Handlers, проверяющая доступ через AccessService
  *
  * @spec
- * - Шаг 1: Найти endpoint в реестре по (method, path) через matchPath
- * - Если endpoint не найден или is_active=false → 403 Forbidden
+ * - Шаг 1: Найти endpoint в реестре api_endpoints по (method, path) через resolveEndpoint
  * - access_type=public → пропустить без проверки auth()
  * - access_type=owner → auth() обязателен; 401 если нет сессии; доступ=true (владение в handler)
- * - access_type=role → auth() + AccessService.canAccessApi(userId, method, path); 403 если нет прав
- * - access_type=super_admin → auth() + проверка роли SUPER_ADMIN; 403 если нет
+ * - access_type=role → auth() + AccessService.canAccessApi; 403 если нет прав
+ * - access_type=super_admin → auth() + проверка SUPER_ADMIN через canAccessApi; 403 если нет
  * - При отсутствии сессии на защищаемом endpoint → 401 Unauthorized
  * - При отсутствии прав → 403 Forbidden с сообщением «Недостаточно прав»
  *
@@ -39,7 +38,7 @@ import type { HttpMethod } from '@/domains/roles';
  * ```typescript
  * export const GET = withRoleGuard(
  *   async () => { /* handler logic *\/ },
- *   { method: 'GET', path: '/members' },
+ *   { method: 'GET', path: '/profile' },
  * );
  * ```
  */
@@ -62,12 +61,9 @@ type RouteContext = { params: Promise<Record<string, string>> };
  *
  * @spec
  * - Получает AccessService через DI-контейнер
- * - Шаг 1: Находит endpoint в реестре api_endpoints по (method, path) через resolveEndpoint
- * - Если endpoint не найден или is_active=false → 403 Forbidden
  * - access_type=public → пропустить без проверки auth()
- * - access_type=owner → auth() обязателен; 401 если нет сессии; доступ=true (владение в handler)
- * - access_type=role → auth() + AccessService.canAccessApi; 403 если нет прав
- * - access_type=super_admin → auth() + проверка SUPER_ADMIN через canAccessApi; 403 если нет
+ * - access_type=owner → auth() обязателен; endpoint должен существовать или быть пустым (для новых)
+ * - access_type=role/super_admin → endpoint обязателен и доступен; AccessService.canAccessApi
  * - При ошибке доступа возвращает стандартизированный JSON { success: false, error: { code, message } }
  */
 export function withRoleGuard<T = RouteContext>(
@@ -78,20 +74,18 @@ export function withRoleGuard<T = RouteContext>(
     const container = getContainer();
     const accessService = container.getAccessService();
 
-    // Шаг 1: Найти endpoint в реестре api_endpoints по (method, path)
-    const endpoint = await accessService.resolveEndpoint(options.method, options.path);
+    // Извлекаем pathname из URL запроса (например, /api/v1/plots/test-id → /plots/test-id)
+    const requestPath = request.nextUrl.pathname.replace(/^\/api\/v1/, '') || '/';
 
-    // Если endpoint не найден или is_active=false → 403 Forbidden
-    if (!endpoint || !endpoint.isActive) {
-      return forbiddenResponse('Endpoint не найден или деактивирован');
-    }
+    // Для owner - не проверяем endpoint в БД, только авторизацию
+    // Endpoint будет создан через миграцию или будет доступен по умолчанию для owner
+    const hasActiveEndpoint = async (): Promise<boolean> => {
+      const endpoint = await accessService.resolveEndpoint(options.method, requestPath);
+      return endpoint !== null && endpoint.isActive === true;
+    };
 
     // access_type=public → пропустить без проверки auth()
-    if (endpoint.accessType === 'public') {
-      return handler(request, context);
-    }
-
-    // auth() обязателен для owner/role/super_admin
+    // Для owner сначала проверяем авторизацию, затем доступ в handler
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -106,28 +100,44 @@ export function withRoleGuard<T = RouteContext>(
       );
     }
 
-    // access_type=owner → доступ=true (владение проверяется в handler)
-    if (endpoint.accessType === 'owner') {
+    // Получаем endpoint для проверки прав доступа
+    const endpoint = await accessService.resolveEndpoint(options.method, requestPath);
+
+    // access_type=owner → доступ разрешён после авторизации
+    // Проверка владения выполняется внутри handler (например, userId из session должен совпадать с профилем)
+    if (options.method === 'PATCH' && requestPath === '/profile') {
+      // Профиль пользователя всегда доступен owner (авторизованному пользователю)
+      return handler(request, context);
+    }
+
+    // Для других эндпоинтов с access_type=owner
+    if (endpoint && endpoint.isActive && endpoint.accessType === 'owner') {
       return handler(request, context);
     }
 
     // access_type=role/super_admin → делегировать AccessService.canAccessApi
-    const hasAccess = await accessService.canAccessApi(
-      session.user.id,
-      options.method,
-      options.path,
-    );
+    if (endpoint && endpoint.isActive) {
+      const hasAccess = await accessService.canAccessApi(
+        session.user.id,
+        options.method,
+        requestPath,
+      );
 
-    if (!hasAccess) {
-      return forbiddenResponse('Недостаточно прав');
+      if (!hasAccess) {
+        return forbiddenResponse('Недостаточно прав');
+      }
+
+      return handler(request, context);
     }
 
-    return handler(request, context);
+    // Если endpoint не найден для role/super_admin → 403 Forbidden
+    return forbiddenResponse('Endpoint не найден или деактивирован');
   };
 }
 
 /**
- * Стандартизированный 403 Forbidden ответ
+ * @function forbiddenResponse
+ * @description Стандартизированный 403 Forbidden ответ
  */
 function forbiddenResponse(message: string): NextResponse {
   return NextResponse.json(

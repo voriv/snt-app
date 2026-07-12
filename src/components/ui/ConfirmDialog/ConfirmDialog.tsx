@@ -100,7 +100,7 @@ export function ConfirmDialog({
   }, [isOpen, handleEscape]);
 
   if (!isOpen) {
-    return null;
+    return <></>;
   }
 
   const confirmButtonVariants = {

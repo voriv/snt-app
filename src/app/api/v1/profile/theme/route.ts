@@ -1,9 +1,31 @@
+/**
+ * @file src/app/api/v1/profile/theme/route.ts
+ * @description API endpoint для смены темы оформления пользователя
+ *
+ * @spec
+ * - PATCH /api/v1/profile/theme: accessType=owner
+ * - withRoleGuard обрабатывает авторизацию
+ *
+ * @see src/domains/roles/access.service.ts
+ * @see src/app/api/v1/_shared/with-role-guard.ts
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { createUserProfileService } from '@/domains/userProfile/userProfile.service';
-import type { BaseError } from '@/shared/errors';
+import { withRoleGuard } from '@/app/api/v1/_shared/with-role-guard';
 
 const userProfileService = createUserProfileService();
+
+async function handleUpdateTheme(request: NextRequest) {
+  const session = await auth();
+  const userId = session?.user?.id!;
+  const body = await request.json();
+  const updatedTheme = await userProfileService.updateTheme(userId, body.theme);
+  return NextResponse.json({
+    success: true,
+    data: { theme: updatedTheme },
+  });
+}
 
 /**
  * @route PATCH /api/v1/profile/theme
@@ -17,65 +39,10 @@ const userProfileService = createUserProfileService();
  * @response 404 { success: false, error: { code: 'USER_PROFILE_NOT_FOUND', message: string } }
  *
  * @spec
+ * - accessType=owner через сессию
  * - Проверяет авторизацию через session
  * - Валидирует тему через Zod-схему
  * - Вызывает updateTheme(userId, theme)
  * - Возвращает обновленную тему
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    // Проверяем авторизацию
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Пожалуйста, авторизуйтесь для изменения темы',
-          },
-        },
-        { status: 401 }
-      );
-    }
-
-    // Парсим тело запроса
-    const body = await request.json();
-
-    // Вызываем сервис для обновления темы
-    const updatedTheme = await userProfileService.updateTheme(
-      session.user.id,
-      body.theme
-    );
-
-    return NextResponse.json({
-      success: true,
-      data: { theme: updatedTheme },
-    });
-  } catch (error) {
-    if (error instanceof Error && 'code' in error) {
-      const baseError = error as BaseError;
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: baseError.code,
-            message: baseError.message,
-          },
-        },
-        { status: baseError.statusCode }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: (error as Error).message || 'Unknown error',
-        },
-      },
-      { status: 500 }
-    );
-  }
-}
+export const PATCH = withRoleGuard(handleUpdateTheme, { method: 'PATCH', path: '/profile/theme' });

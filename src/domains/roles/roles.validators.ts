@@ -55,12 +55,15 @@ export const createRoleSchema = z.object({
 export const updateRoleSchema = z.object({
   name: z
     .string()
-    .min(2, 'Имя роли должно содержать минимум 2 символа')
-    .max(50, 'Имя роли не может превышать 50 символов')
-    .optional(),
+    .nullable()
+    .transform(v => (v === null || v === '' ? null : v))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => (v === '' ? null : v)),
   description: z
     .string()
-    .max(500, 'Описание не может превышать 500 символов')
+    .nullable()
+    .transform(v => (v === null || v === '' ? null : v))
     .optional()
     .or(z.literal(''))
     .transform(v => (v === '' ? null : v)),
@@ -89,16 +92,27 @@ export const createPageSchema = z.object({
 export const updatePageSchema = z.object({
   path: z
     .string()
-    .regex(PATH_REGEX, 'Путь должен начинаться с /')
-    .optional(),
+    .nullable()
+    .transform(v => (v === null ? null : v))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => (v === '' ? null : v)),
   title: z
     .string()
-    .min(2, 'Заголовок должен содержать минимум 2 символа')
-    .max(100, 'Заголовок не может превышать 100 символов')
-    .optional(),
-  groupName: optionalString(100),
-  sortOrder: z.number().int().optional(),
-  isActive: z.boolean().optional(),
+    .nullable()
+    .transform(v => (v === null ? null : v))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => (v === '' ? null : v)),
+  groupName: z
+    .string()
+    .nullable()
+    .transform(v => (v === null ? null : v))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => (v === '' ? null : v)),
+  sortOrder: z.number().int().nullable().optional(),
+  isActive: z.boolean().nullable().optional(),
 });
 
 /**
@@ -120,15 +134,31 @@ export const createApiEndpointSchema = z.object({
 /**
  * @description Схема обновления API endpoint
  */
+/**
+ * @description Опциональное строковое поле с nullable. null, "" и undefined → null
+ * @spec - transform: null/empty string → null
+ */
+function optionalNullableString(maxLength: number) {
+  return z
+    .string()
+    .max(maxLength, `Не может превышать ${maxLength} символов`)
+    .nullable()
+    .transform(v => (v === null || v === '' ? null : v));
+}
+
 export const updateApiEndpointSchema = z.object({
-  method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']).optional(),
+  method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']).nullable().optional(),
   path: z
     .string()
     .regex(API_PATH_REGEX, 'Путь должен начинаться с /')
-    .optional(),
-  description: optionalString(500),
-  accessType: z.enum(['public', 'owner', 'role', 'super_admin']).optional(),
-  isActive: z.boolean().optional(),
+    .nullable()
+    .transform(v => (v === null ? null : v))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => (v === '' ? null : v)),
+  description: optionalNullableString(500).optional(),
+  accessType: z.enum(['public', 'owner', 'role', 'super_admin']).nullable().optional(),
+  isActive: z.boolean().nullable().optional(),
 });
 
 export type CreateRoleInput = z.infer<typeof createRoleSchema>;

@@ -1,12 +1,31 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'СНТ Берёзки-НТ — Управление товариществом',
-  description: 'Система управления членами СНТ Берёзки-НТ. Просмотр информации о членах, участках и платежах.',
-};
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSession } from '@/hooks/useSession';
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { data: session, loading } = useSession();
+
+  useEffect(() => {
+    // AC-10.1.1: Перенаправление авторизованного пользователя на dashboard
+    if (!loading && session) {
+      router.replace('/dashboard');
+    }
+  }, [session, loading, router]);
+
+  // AC-10.2.1: Обработка состояния загрузки
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-600">Загрузка...</div>
+      </div>
+    );
+  }
+
+  // AC-10.1.2: Landing page для неавторизованных пользователей
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4">
       <div className="max-w-2xl text-center space-y-8">

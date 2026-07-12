@@ -1,0 +1,24 @@
+# Docker Compose configuration for test database
+version: '3.8'
+
+services:
+  test-db:
+    image: postgres:15-alpine
+    container_name: snt-test-db
+    restart: no
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: snt_test
+    ports:
+      - "54320:5432"
+    volumes:
+      - test-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test-db-data:

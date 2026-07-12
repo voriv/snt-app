@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from '@/hooks/useTheme';
 
 /**
@@ -9,8 +10,9 @@ import { ThemeProvider } from '@/hooks/useTheme';
  *
  * @spec
  * - Размещается в корневом RootLayout (Server Component)
- * - Оборачивает приложение в ThemeProvider — единый источник истины для состояния темы
- * - Все дочерние компоненты (AppLayout, ProfilePage, Navbar) получают доступ к useTheme
+ * - Оборачивает приложение в SessionProvider — источник сессий NextAuth
+ * - Оборачивает приложение в ThemeProvider — единый источник истины для темы
+ * - Все дочерние компоненты (AppLayout, ProfilePage, Navbar) получают доступ к useTheme и useSession
  *
  * @example
  * ```tsx
@@ -23,5 +25,9 @@ import { ThemeProvider } from '@/hooks/useTheme';
  * ```
  */
 export function Providers({ children }: { children: ReactNode }) {
-  return <ThemeProvider>{children}</ThemeProvider>;
+  return (
+    <SessionProvider>
+      <ThemeProvider>{children}</ThemeProvider>
+    </SessionProvider>
+  );
 }

@@ -8,4 +8,8 @@
  *
  * @see src/lib/auth.ts — основная конфигурация NextAuth
  */
-export { GET, POST } from '@/lib/auth';
+// Эпоксируем GET/POST для совместимости с предыдущей версией
+import { NextAuthHandler as NextAuth } from '@/lib/auth';
+
+export const GET = NextAuth;
+export const POST = NextAuth;

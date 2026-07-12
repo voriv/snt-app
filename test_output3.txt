@@ -1,0 +1,222 @@
+
+> snt-app@0.1.0 test
+> vitest run plots.test.ts --run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mc:/git/snt-app[39m
+
+ [31m❯[39m tests/api/plots.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m11 failed[39m[2m)[22m[32m 26[2mms[22m[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return 200 with plots array when authorized as ADMIN[39m[32m 12[2mms[22m[39m
+[31m     → expected 403 to be 200 // Object.is equality[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return 401 without auth[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 401 // Object.is equality[39m
+   [32m✓[39m GET /api/v1/plots[2m > [22mshould return 403 for MEMBER role[32m 2[2mms[22m[39m
+[31m   [31m×[31m GET /api/v1/plots[2m > [22mshould return plots with correct structure[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 200 // Object.is equality[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould create a plot and return 201[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 201 // Object.is equality[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when plotNumber is empty[39m[32m 3[2mms[22m[39m
+[31m     → expected [ 400 ] to include 403[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is missing[39m[32m 1[2mms[22m[39m
+[31m     → expected [ 400 ] to include 403[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is negative[39m[32m 1[2mms[22m[39m
+[31m     → expected [ 400 ] to include 403[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 400 when area is zero[39m[32m 1[2mms[22m[39m
+[31m     → expected [ 400 ] to include 403[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 409 when plotNumber already exists[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 409 // Object.is equality[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould return 401 without auth[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 401 // Object.is equality[39m
+   [32m✓[39m POST /api/v1/plots[2m > [22mshould return 403 for MEMBER role[32m 1[2mms[22m[39m
+[31m   [31m×[31m POST /api/v1/plots[2m > [22mshould handle server error and return 500[39m[32m 1[2mms[22m[39m
+[31m     → expected 403 to be 500 // Object.is equality[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 11 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return 200 with plots array when authorized as ADMIN
+[31m[1mAssertionError[22m: expected 403 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m132:29[22m[39m
+    [90m130| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mGET[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m131| [39m
+    [90m132| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m133| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m134| [39m    [34mexpect[39m(json)[33m.[39m[34mtoMatchObject[39m({
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return 401 without auth
+[31m[1mAssertionError[22m: expected 403 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m147:29[22m[39m
+    [90m145| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mGET[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m146| [39m
+    [90m147| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m148| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m149| [39m    [34mexpect[39m(json)[33m.[39m[34mtoMatchObject[39m({
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mGET /api/v1/plots[2m > [22mshould return plots with correct structure
+[31m[1mAssertionError[22m: expected 403 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m212:29[22m[39m
+    [90m210| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mGET[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m211| [39m
+    [90m212| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m213| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m214| [39m    [34mexpect[39m(json[33m.[39mdata)[33m.[39m[34mtoHaveLength[39m([34m1[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould create a plot and return 201
+[31m[1mAssertionError[22m: expected 403 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m270:29[22m[39m
+    [90m268| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m269| [39m
+    [90m270| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m271| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m272| [39m    [34mexpect[39m(json)[33m.[39m[34mtoMatchObject[39m({
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when plotNumber is empty
+[31m[1mAssertionError[22m: expected [ 400 ] to include 403[39m
+[36m [2m❯[22m tests/api/plots.test.ts:[2m309:19[22m[39m
+    [90m307| [39m
+    [90m308| [39m    [90m// Проверка что статус 400 (валидация в сервисе)[39m
+    [90m309| [39m    [34mexpect[39m([[34m400[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m310| [39m  })[33m;[39m
+    [90m311| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is missing
+[31m[1mAssertionError[22m: expected [ 400 ] to include 403[39m
+[36m [2m❯[22m tests/api/plots.test.ts:[2m339:19[22m[39m
+    [90m337| [39m
+    [90m338| [39m    [90m// Проверка что статус 400 (валидация в сервисе)[39m
+    [90m339| [39m    [34mexpect[39m([[34m400[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m340| [39m  })[33m;[39m
+    [90m341| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is negative
+[31m[1mAssertionError[22m: expected [ 400 ] to include 403[39m
+[36m [2m❯[22m tests/api/plots.test.ts:[2m370:19[22m[39m
+    [90m368| [39m
+    [90m369| [39m    [90m// Проверка что статус 400 (валидация в сервисе)[39m
+    [90m370| [39m    [34mexpect[39m([[34m400[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m371| [39m  })[33m;[39m
+    [90m372| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 400 when area is zero
+[31m[1mAssertionError[22m: expected [ 400 ] to include 403[39m
+[36m [2m❯[22m tests/api/plots.test.ts:[2m401:19[22m[39m
+    [90m399| [39m
+    [90m400| [39m    [90m// Проверка что статус 400 (валидация в сервисе)[39m
+    [90m401| [39m    [34mexpect[39m([[34m400[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                  [31m^[39m
+    [90m402| [39m  })[33m;[39m
+    [90m403| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 409 when plotNumber already exists
+[31m[1mAssertionError[22m: expected 403 to be 409 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 409[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m436:29[22m[39m
+    [90m434| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m435| [39m
+    [90m436| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m409[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m437| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m438| [39m    [34mexpect[39m(json)[33m.[39m[34mtoMatchObject[39m({
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould return 401 without auth
+[31m[1mAssertionError[22m: expected 403 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m454:29[22m[39m
+    [90m452| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m453| [39m
+    [90m454| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m455| [39m    [35mconst[39m json [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m456| [39m    [34mexpect[39m(json)[33m.[39m[34mtoMatchObject[39m({
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/11]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/api/plots.test.ts[2m > [22mPOST /api/v1/plots[2m > [22mshould handle server error and return 500
+[31m[1mAssertionError[22m: expected 403 to be 500 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 500[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m tests/api/plots.test.ts:[2m526:29[22m[39m
+    [90m524| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m(request[33m,[39m {} [35mas[39m any)[33m;[39m
+    [90m525| [39m
+    [90m526| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m500[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m527| [39m  })[33m;[39m
+    [90m528| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/11]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m11 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 11:45:58
+[2m   Duration [22m 2.30s[2m (transform 150ms, setup 367ms, collect 308ms, tests 26ms, environment 0ms, prepare 152ms)[22m
+

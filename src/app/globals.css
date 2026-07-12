@@ -127,16 +127,213 @@ body {
   color: var(--theme-text-secondary);
 }
 
-[data-theme] .hover\\:text-gray-700:hover {
-  color: var(--theme-text-primary);
+/* ========== Тёмные темы (dark, green) ========== */
+/* Переопределяем стандартные цвета Tailwind для тёмных тем */
+/* Все text-gray-* должны быть СВЕТЛЫМИ на тёмном фоне */
+
+/* Основные цвета текста - СВЕТЛЫЕ */
+[data-theme='dark'] .text-gray-900,
+[data-theme='dark'] .text-gray-800,
+[data-theme='dark'] .text-gray-700,
+[data-theme='dark'] .text-gray-600,
+[data-theme='green'] .text-gray-900,
+[data-theme='green'] .text-gray-800,
+[data-theme='green'] .text-gray-700,
+[data-theme='green'] .text-gray-600 {
+  color: var(--theme-text-primary) !important; /* #f9fafb для dark, #ecfdf5 для green */
 }
 
-[data-theme] .border-gray-200 {
+/* Вторичный текст (email, даты, комментарии) - светло-серый */
+[data-theme='dark'] .text-gray-500,
+[data-theme='green'] .text-gray-500 {
+  color: #e5e7eb !important; /* gray-200 - хорошо виден на тёмном фоне */
+}
+
+/* Email и вторичная информация - ещё светлее */
+[data-theme='dark'] .text-gray-400,
+[data-theme='green'] .text-gray-400 {
+  color: #d1d5db !important; /* gray-300 - хорошо виден на тёмном фоне */
+}
+
+[data-theme='dark'] .text-gray-300,
+[data-theme='green'] .text-gray-300 {
+  color: #e5e7eb !important; /* gray-200 */
+}
+
+[data-theme='dark'] .text-gray-200,
+[data-theme='green'] .text-gray-200 {
+  color: #f3f4f6 !important; /* gray-100 */
+}
+
+[data-theme='dark'] .text-gray-100,
+[data-theme='green'] .text-gray-100 {
+  color: #f9fafb !important; /* gray-50 */
+}
+
+/* ========== Фоны для тёмных тем ========== */
+[data-theme='dark'] .bg-white,
+[data-theme='green'] .bg-white {
+  background-color: var(--theme-bg-primary);
+}
+
+[data-theme='dark'] .bg-gray-50,
+[data-theme='green'] .bg-gray-50 {
+  background-color: var(--theme-bg-secondary);
+}
+
+[data-theme='dark'] .bg-gray-900,
+[data-theme='green'] .bg-gray-900 {
+  background-color: #374151; /* gray-700 */
+}
+
+[data-theme='dark'] .bg-gray-900 > *,
+[data-theme='green'] .bg-gray-900 > * {
+  color: #f9fafb; /* gray-50 */
+}
+
+/* ========== Границы для тёмных тем ========== */
+[data-theme='dark'] .border-gray-200,
+[data-theme='green'] .border-gray-200 {
   border-color: var(--theme-border-color);
 }
 
-[data-theme] .border-gray-300:hover {
-  border-color: var(--theme-text-secondary);
+[data-theme='dark'] .border-gray-300,
+[data-theme='green'] .border-gray-300 {
+  border-color: #4b5563; /* gray-600 */
+}
+
+/* ========== Разделители для тёмных тем ========== */
+[data-theme='dark'] .divide-y > :not([hidden]) ~ :not([hidden]),
+[data-theme='green'] .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--theme-border-color);
+}
+
+[data-theme='dark'] .divide-gray-200,
+[data-theme='green'] .divide-gray-200 {
+  border-color: var(--theme-border-color);
+}
+
+/* ========== Hover-эффекты для тёмных тем ========== */
+[data-theme='dark'] .hover\:bg-gray-100:hover,
+[data-theme='green'] .hover\:bg-gray-100:hover {
+  background-color: #374151 !important; /* gray-700 - подсветка строки при наведении */
+}
+
+[data-theme='dark'] .hover\:bg-gray-50:hover,
+[data-theme='green'] .hover\:bg-gray-50:hover {
+  background-color: #374151 !important; /* gray-700 */
+}
+
+/* ========== Цвета действий для тёмных тем ========== */
+
+/* Красный (удаление, ошибки) */
+[data-theme='dark'] .text-red-500,
+[data-theme='green'] .text-red-500 {
+  color: #fca5a5 !important; /* red-300 - более светлый */
+}
+
+[data-theme='dark'] .text-red-600,
+[data-theme='green'] .text-red-600 {
+  color: #f87171 !important; /* red-400 */
+}
+
+[data-theme='dark'] .hover\:text-red-800:hover,
+[data-theme='green'] .hover\:text-red-800:hover {
+  color: #fca5a5 !important; /* red-300 */
+}
+
+/* Indigo/Violet (редактирование) */
+[data-theme='dark'] .text-indigo-600,
+[data-theme='green'] .text-indigo-600 {
+  color: #a78bfa !important; /* violet-400 */
+}
+
+[data-theme='dark'] .hover\:text-indigo-800:hover,
+[data-theme='green'] .hover\:text-indigo-800:hover {
+  color: #c4b5fd !important; /* violet-300 */
+}
+
+/* Green (бессрочно, успех) */
+[data-theme='dark'] .text-green-600,
+[data-theme='green'] .text-green-600 {
+  color: #6ee7b7 !important; /* green-300 */
+}
+
+/* ========== Тени для тёмных тем ========== */
+[data-theme='dark'] .shadow-sm,
+[data-theme='green'] .shadow-sm {
+  box-shadow: 0 1px 2px 0 var(--theme-nav-shadow);
+}
+
+/* ========== Badge (бейджи) для тёмных тем ========== */
+/* Default Badge (роли) - фон и текст должны быть контрастными */
+[data-theme='dark'] .bg-gray-100,
+[data-theme='green'] .bg-gray-100 {
+  background-color: #374151 !important; /* gray-700 */
+  color: #f9fafb !important; /* gray-50 */
+}
+
+[data-theme='dark'] .bg-gray-100 .text-gray-800,
+[data-theme='green'] .bg-gray-100 .text-gray-800 {
+  color: #f9fafb !important; /* gray-50 - текст на бейдже */
+}
+
+/* Success Badge (активный статус) */
+[data-theme='dark'] .bg-green-100,
+[data-theme='green'] .bg-green-100 {
+  background-color: #065f46 !important; /* green-900 - темный фон */
+  color: #6ee7b7 !important; /* green-300 - светлый текст */
+}
+
+[data-theme='dark'] .bg-green-100 .text-green-800,
+[data-theme='green'] .bg-green-100 .text-green-800 {
+  color: #6ee7b7 !important; /* green-300 */
+}
+
+/* Warning Badge (ожидающий статус) */
+[data-theme='dark'] .bg-yellow-100,
+[data-theme='green'] .bg-yellow-100 {
+  background-color: #78350f !important; /* amber-900 - темный фон */
+  color: #fde68a !important; /* amber-300 - светлый текст */
+}
+
+[data-theme='dark'] .bg-yellow-100 .text-yellow-800,
+[data-theme='green'] .bg-yellow-100 .text-yellow-800 {
+  color: #fde68a !important; /* amber-300 */
+}
+
+/* Danger Badge (истёкший статус) */
+[data-theme='dark'] .bg-red-100,
+[data-theme='green'] .bg-red-100 {
+  background-color: #7f1d1d !important; /* red-900 - темный фон */
+  color: #fca5a5 !important; /* red-300 - светлый текст */
+}
+
+[data-theme='dark'] .bg-red-100 .text-red-800,
+[data-theme='green'] .bg-red-100 .text-red-800 {
+  color: #fca5a5 !important; /* red-300 */
+}
+
+/* Info Badge */
+[data-theme='dark'] .bg-blue-100,
+[data-theme='green'] .bg-blue-100 {
+  background-color: #1e3a8a !important; /* blue-900 - темный фон */
+  color: #93c5fd !important; /* blue-300 - светлый текст */
+}
+
+[data-theme='dark'] .bg-blue-100 .text-blue-800,
+[data-theme='green'] .bg-blue-100 .text-blue-800 {
+  color: #93c5fd !important; /* blue-300 */
+}
+
+[data-theme='dark'] .divide-y > :not([hidden]) ~ :not([hidden]),
+[data-theme='green'] .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--theme-border-color);
+}
+
+[data-theme='dark'] .divide-gray-200,
+[data-theme='green'] .divide-gray-200 {
+  border-color: var(--theme-border-color);
 }
 
 [data-theme] .shadow-sm {

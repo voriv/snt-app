@@ -19,10 +19,8 @@ docs/model/
 ├── README.md            # Общее описание модели, ER-диаграмма
 ├── entities/            # Описание каждой сущности
 │   ├── user.md
-│   ├── member.md
 │   ├── plot.md
-│   ├── agreement.md
-│   └── payment.md
+│   └── role.md
 └── conventions.md       # Конвенции именования, типы данных, стандарты
 ```
 
@@ -99,10 +97,8 @@ flowchart TD
 | Таблица | Описание |
 |---------|----------|
 | `users` | Пользователи системы |
-| `members` | Члены СНТ |
 | `plots` | Участки СНТ |
-| `agreements` | Договоры |
-| `payments` | Платежи |
+| `roles` | Настраиваемый реестр ролей (RBAC) |
 
 ---
 
@@ -176,25 +172,18 @@ flowchart TD
 ## 9. Пример Prisma-схемы с snake_case
 
 ```prisma
-model Member {
-  id          String        @id @default(cuid())
-  user_id     String        @unique @map("user_id")
-  first_name  String        @map("first_name")
-  last_name   String        @map("last_name")
-  birth_date  DateTime?     @map("birth_date")
-  phone       String?       @map("phone")
-  email       String?       @map("email")
-  is_active   Boolean       @default(true) @map("is_active")
-  note        String?       @map("note")
-  created_at  DateTime      @default(now()) @map("created_at")
-  updated_at  DateTime      @updatedAt @map("updated_at")
+model Plot {
+  id              String      @id @default(cuid())
+  plot_number     String      @unique @map("plot_number")
+  cadastral_number String?    @unique @map("cadastral_number") @db.VarChar(20)
+  area            Decimal     @map("area") @db.Decimal(10, 2)
+  address         String?     @map("address")
+  note            String?     @map("note")
+  created_at      DateTime    @default(now()) @map("created_at")
+  updated_at      DateTime    @updatedAt @map("updated_at")
 
-  plot        Plot?
-  agreements  Agreement[]
-  payments    Payment[]
-
-  @@map("members") // Имя таблицы в БД
+  @@map("plots")
 }
 ```
 
-**Важно:** В коде используется `member.firstName`, но в БД это колонка `first_name`.
+**Важно:** В коде используется `plot.plotNumber`, но в БД это колонка `plot_number`.

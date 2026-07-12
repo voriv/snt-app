@@ -34,6 +34,7 @@ export type {
 } from './roles.repository.interface';
 
 export {
+  GuestRoleNotFoundError,
   RoleNotFoundError,
   RoleDuplicateError,
   RoleSystemProtectedError,

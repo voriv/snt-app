@@ -8,6 +8,7 @@
  * - findByEmail возвращает null если пользователь не найден — НЕ бросает ошибку
  * - create может выбросить Prisma P2002 при нарушении уникальности email
  * - Превращает Prisma ошибку P2002 в UserDuplicateError на уровне сервиса
+ * - Превращает GuestRoleMissingError из транзакции без изменений
  * - Превращает любую другую ошибку в UserInvalidDataError
  *
  * @see src/domains/auth/auth.repository.interface.ts — интерфейс
@@ -15,7 +16,7 @@
 import type { IAuthRepository } from './auth.repository.interface';
 import type { UserData, UserWithPassword, CreateUserInput } from './auth.types';
 import { prisma } from '@/infrastructure/prisma/client';
-import { UserDuplicateError, UserInvalidDataError } from './auth.errors';
+import { UserDuplicateError, UserInvalidDataError, GuestRoleMissingError } from './auth.errors';
 
 export class AuthRepository implements IAuthRepository {
   /**
@@ -91,10 +92,18 @@ export class AuthRepository implements IAuthRepository {
    *
    * @param data - Данные для создания: email, passwordHash, name
    * @returns Созданный пользователь без password
+   * @throws {UserDuplicateError} если email уже существует
+   * @throws {GuestRoleMissingError} если роль GUEST отсутствует в БД
+   * @throws {UserInvalidDataError} при других ошибках создания
    *
    * @spec
-   * - Создаёт пользователя и назначает ему системную роль GUEST в одной транзакции (RBAC, US-8)
-   * - Роль GUEST ищется по name в таблице roles; если не найдена — пользователь создаётся без роли
+   * - Создаёт пользователя и назначает ему системную роль GUEST в одной транзакции (RBAC, US-8, US-01)
+   * - Роль GUEST ищется по name в таблице roles
+   * - Если роль GUEST отсутствует — выбрасывает GuestRoleMissingError ВНУТРИ транзакции (AC-5, US-01)
+   * - Транзакция полностью откатывается при отсутствии роли GUEST — пользователь не создаётся
+   * - При Prisma P2002 для email — выбрасывает UserDuplicateError
+   * - При Prisma P2002 для user_roles (idempotency) — выбрасывает UserInvalidDataError
+   * - Любая другая ошибка преобразуется в UserInvalidDataError
    */
   async create(data: CreateUserInput): Promise<UserData> {
     try {
@@ -114,20 +123,24 @@ export class AuthRepository implements IAuthRepository {
           },
         });
 
-        // Назначение системной роли GUEST новому пользователю (RBAC, US-8)
+        // Поиск системной роли GUEST
         const guestRole = await tx.role.findUnique({
           where: { name: 'GUEST' },
           select: { id: true },
         });
 
-        if (guestRole) {
-          await tx.userRole.create({
-            data: {
-              userId: user.id,
-              roleId: guestRole.id,
-            },
-          });
+        // AC-5: Если роль GUEST отсутствует — откатить транзакцию
+        if (!guestRole) {
+          throw new GuestRoleMissingError();
         }
+
+        // Назначение системной роли GUEST новому пользователю (RBAC, US-8)
+        await tx.userRole.create({
+          data: {
+            userId: user.id,
+            roleId: guestRole.id,
+          },
+        });
 
         return user;
       });
@@ -140,11 +153,17 @@ export class AuthRepository implements IAuthRepository {
         updatedAt: result.updatedAt,
       };
     } catch (error) {
+      // GuestRoleMissingError — пробрасываем без изменений
+      if (error instanceof GuestRoleMissingError) {
+        throw error;
+      }
+
       // Prisma P2002 - уникальное ограничение нарушено (email уже существует)
       const prismaError = error as { code?: string; meta?: { target?: string[] } };
       if (prismaError.code === 'P2002' && prismaError.meta?.target?.includes('email')) {
         throw new UserDuplicateError(data.email);
       }
+
       // Любая другая ошибка преобразуется в UserInvalidDataError
       console.error('AuthRepository.create error:', error);
       throw new UserInvalidDataError('Ошибка при создании пользователя');

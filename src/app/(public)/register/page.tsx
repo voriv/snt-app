@@ -30,6 +30,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useRegister, type RegisterData } from '@/hooks/useRegister';
 
 /**
@@ -105,17 +106,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {apiError && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-800">{apiError}</div>
-          </div>
-        )}
-
-        {localError && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-800">{localError}</div>
-          </div>
-        )}
+        {(apiError || localError) && <ErrorMessage message={apiError || localError} />}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div>

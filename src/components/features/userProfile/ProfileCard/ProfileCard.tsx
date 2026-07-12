@@ -17,9 +17,12 @@
  * - Отображает email из User
  * - Отображает телефон (если есть)
  * - Отображает bio (если есть)
+ * - Отображает дату регистрации пользователя (userCreatedAt) в формате dd.MM.yyyy
+ * - Отображает дату создания профиля (profileCreatedAt) в формате dd.MM.yyyy
  * - Показывает статус (активный/неактивный)
  * - При isEditable=true показывает кнопку "Редактировать"
  * - Доступность: правильные aria-labels для аватара
+ * - Пустые поля (null) отображаются как "—" (EC-7)
  */
 'use client';
 
@@ -49,6 +52,10 @@ export interface ProfileCardProps {
     avatar: string | null;
     /** Биография (опционально) */
     bio: string | null;
+    /** Дата регистрации пользователя */
+    userCreatedAt: Date;
+    /** Дата создания профиля */
+    profileCreatedAt: Date;
   };
   /** Показывать ли режим редактирования */
   isEditable?: boolean;
@@ -67,6 +74,25 @@ const DEFAULT_ROLE_LABEL: { label: string; variant: 'default' | 'success' | 'war
   label: 'Роль',
   variant: 'default',
 };
+
+/**
+ * Helper для отображения значения или прочерка если null/undefined
+ * @param value - Значение для отображения
+ * @returns Отображаемое значение или "—"
+ */
+function displayValue(value: string | null | Date): string {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  if (value instanceof Date) {
+    // Формат dd.MM.yyyy (напр. 12.07.2026)
+    const day = String(value.getDate()).padStart(2, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const year = value.getFullYear();
+    return `${day}.${month}.${year}`;
+  }
+  return String(value);
+}
 
 export function ProfileCard({
   user,
@@ -136,21 +162,21 @@ export function ProfileCard({
           {profile.middleName && (
             <div className="flex items-center text-sm">
               <span className="w-24 text-gray-500 font-medium">Отчество:</span>
-              <span className="text-gray-900">{profile.middleName}</span>
+              <span className="text-gray-900">{displayValue(profile.middleName)}</span>
             </div>
           )}
           <div className="flex items-center text-sm">
             <span className="w-24 text-gray-500 font-medium">Имя:</span>
-            <span className="text-gray-900">{profile.firstName}</span>
+            <span className="text-gray-900">{displayValue(profile.firstName)}</span>
           </div>
           <div className="flex items-center text-sm">
             <span className="w-24 text-gray-500 font-medium">Фамилия:</span>
-            <span className="text-gray-900">{profile.lastName}</span>
+            <span className="text-gray-900">{displayValue(profile.lastName)}</span>
           </div>
           {profile.phone && (
             <div className="flex items-center text-sm">
               <span className="w-24 text-gray-500 font-medium">Телефон:</span>
-              <span className="text-gray-900">{profile.phone}</span>
+              <span className="text-gray-900">{displayValue(profile.phone)}</span>
             </div>
           )}
           {profile.bio && (
@@ -161,6 +187,14 @@ export function ProfileCard({
               <p className="text-gray-900 whitespace-pre-wrap text-sm">{profile.bio}</p>
             </div>
           )}
+          <div className="flex items-center text-sm">
+            <span className="w-24 text-gray-500 font-medium">Регистрация:</span>
+            <span className="text-gray-900">{displayValue(profile.userCreatedAt)}</span>
+          </div>
+          <div className="flex items-center text-sm">
+            <span className="w-24 text-gray-500 font-medium">Профиль создан:</span>
+            <span className="text-gray-900">{displayValue(profile.profileCreatedAt)}</span>
+          </div>
         </div>
         {isEditable && onEdit && (
           <div className="mt-4 pt-4 border-t border-gray-200">

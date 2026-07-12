@@ -2,7 +2,7 @@
 
 ## Описание
 
-Участок СНТ — земельный участок, принадлежащий СНТ или имеющий зарегистрированного члена СНТ.
+Участок СНТ — земельный участок в системе управления СНТ.
 
 ## Поля
 
@@ -10,10 +10,10 @@
 |------|-----|-------------|----------|----------------|
 | `id` | String | Да | Уникальный идентификатор участка | Генерируется автоматически (cuid) |
 | `plot_number` | String | Да | Номер участка | Уникальный в пределах СНТ |
-| `area` | Decimal | Да | Площадь участка | Точность: 10,2 (гектары) |
+| `cadastral_number` | String? | Нет | Кадастровый номер участка | Уникальный, до 20 символов |
+| `area` | Decimal | Да | Площадь участка | Точность: 10,2 |
 | `address` | String? | Нет | Адрес участка | Опциональное поле |
 | `note` | String? | Нет | Примечание | Опциональное поле |
-| `member_id` | String? | Нет | Ссылка на члена СНТ | Опциональный внешний ключ |
 | `created_at` | DateTime | Да | Дата создания записи | Генерируется автоматически |
 | `updated_at` | DateTime | Да | Дата последнего обновления | Обновляется при каждой записи |
 
@@ -21,25 +21,24 @@
 
 | Сущность | Тип связи | Описание |
 |----------|-----------|----------|
-| Member | has_one | Участок может быть привязан к одному члену СНТ |
-| Agreement | has_many | На участке могут быть заключены договора |
-| Payment | has_many | На участке могут быть оформлены платежи |
+| Agreement | has_many | На участке могут быть заключены договоры |
 
 ## Индексы
 
 | Поля | Тип | Описание |
 |------|-----|----------|
 | `plot_number` | unique | Уникальный номер участка |
-| `member_id` | index | Индекс для поиска участков по члену СНТ |
+| `cadastral_number` | unique | Уникальный кадастровый номер |
 
 ## Бизнес-инварианты
 
 - Номер участка уникален в пределах СНТ
+- Кадастровый номер уникален в пределах СНТ (если задан)
 - Площадь участка должна быть положительным числом
-- Участок может быть привязан к члену СНТ или оставаться свободным
 
 ## Конвенции именования
 
-- **БД (PostgreSQL):** `plots`, `id`, `plot_number`, `area`, `address`, `note`, `member_id`, `created_at`, `updated_at`
-- **Prisma:** `Plot`, `id`, `plotNumber`, `area`, `address`, `note`, `memberId`, `createdAt`, `updatedAt`
-- **TypeScript домен:** `Plot`, `id: string`, `plotNumber: string`, `area: number`, `address: string \| null`, `note: string \| null`, `memberId: string \| null`, `createdAt: Date`, `updatedAt: Date`
+- **БД (PostgreSQL):** `plots`, `id`, `plot_number`, `cadastral_number`, `area`, `address`, `note`, `created_at`, `updated_at`
+- **Prisma:** `Plot`, `id`, `plotNumber`, `cadastralNumber`, `area`, `address`, `note`, `createdAt`, `updatedAt`
+- **TypeScript домен:** `Plot`, `id: string`, `plotNumber: string`, `cadastralNumber: string \| null`, `area: number`, `address: string \| null`, `note: string \| null`, `createdAt: Date`, `updatedAt: Date`
+

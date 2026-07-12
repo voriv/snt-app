@@ -30,7 +30,6 @@ const AVAILABLE_THEMES: Theme[] = ['light', 'dark', 'green'];
  * - При инициализации загружает тему из localStorage или системных настроек
  * - Применяет CSS-переменные (data-theme атрибут) к document.documentElement
  * - Сохраняет выбранную тему в localStorage
- * - При изменении темы обновляет data-theme атрибут на html элементе
  *
  * @example
  * ```tsx
@@ -47,7 +46,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
    * @param theme - Тема для применения
    */
   const applyTheme = useCallback((theme: Theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const html = document.documentElement;
+    html.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, []);
 

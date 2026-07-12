@@ -199,12 +199,8 @@ Enum roles {
 
 ```dbml
 // Существующие:
-Ref: members.user_id > users.id
 Ref: user_profiles.user_id > users.id
-Ref: agreements.member_id > members.id
 Ref: agreements.plot_id > plots.id
-Ref: payments.member_id > members.id
-Ref: payments.plot_id > plots.id
 
 // НОВЫЕ:
 Ref: user_roles.user_id > users.id

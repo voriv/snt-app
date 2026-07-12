@@ -1,6 +1,3 @@
-import { MemberService } from '@/domains/members/member.service';
-import { MemberRepository } from '@/domains/members/member.repository.prisma';
-import type { IMemberRepository } from '@/domains/members/member.repository.interface';
 import { AuthService } from '@/domains/auth/auth.service';
 import { AuthRepository } from '@/domains/auth/auth.repository.prisma';
 import type { IAuthRepository } from '@/domains/auth/auth.repository.interface';
@@ -28,12 +25,21 @@ import type {
   IApiEndpointRepository,
   IRoleApiEndpointRepository,
 } from '@/domains/roles/roles.repository.interface';
-
-// Factory function to create MemberService with injected dependencies
-export function createMemberService(): MemberService {
-  const repository: IMemberRepository = new MemberRepository();
-  return new MemberService(repository);
-}
+import { PlotService } from '@/domains/plot/plot.service';
+import { PlotRepositoryPrisma } from '@/domains/plot/plot.repository.prisma';
+import type { IPlotRepository } from '@/domains/plot/plot.repository.interface';
+import {
+  PlotUserRoleService,
+  createPlotUserRoleService,
+} from '@/domains/plotUser/plotUser.service';
+import {
+  PlotUserRoleRepositoryPrisma,
+  PlotUserRoleHistoryRepositoryPrisma,
+} from '@/domains/plotUser/plotUser.repository.prisma';
+import type {
+  IPlotUserRoleRepository,
+  IPlotUserRoleHistoryRepository,
+} from '@/domains/plotUser/plotUser.repository.interface';
 
 // Factory function to create AuthService with injected dependencies
 export function createAuthService(): AuthService {
@@ -78,9 +84,21 @@ export function createAccessService(): AccessService {
   return new AccessService(roleRepo, pageRepo, rolePageRepo, endpointRepo, roleEndpointRepo);
 }
 
+// Factory function to create PlotService with injected dependencies
+export function createPlotService(): PlotService {
+  const repository: IPlotRepository = new PlotRepositoryPrisma();
+  return new PlotService(repository);
+}
+
+// Factory function to create PlotUserRoleService with injected dependencies
+export function createPlotUserRoleServiceDI(): PlotUserRoleService {
+  const plotUserRoleRepo: IPlotUserRoleRepository = new PlotUserRoleRepositoryPrisma();
+  const historyRepo: IPlotUserRoleHistoryRepository = new PlotUserRoleHistoryRepositoryPrisma();
+  return createPlotUserRoleService(plotUserRoleRepo, historyRepo);
+}
+
 // Container for managing dependencies
 export class Container {
-  private memberService: MemberService | null = null;
   private authService: AuthService | null = null;
   private userProfileService: ReturnType<typeof createUserProfileServiceDI> | null = null;
   private roleService: RoleService | null = null;
@@ -88,14 +106,8 @@ export class Container {
   private apiEndpointService: ApiEndpointService | null = null;
   private roleApiEndpointService: RoleApiEndpointService | null = null;
   private accessService: AccessService | null = null;
-
-  getMemberService(): MemberService {
-    if (!this.memberService) {
-      const repository: IMemberRepository = new MemberRepository();
-      this.memberService = new MemberService(repository);
-    }
-    return this.memberService;
-  }
+  private plotService: PlotService | null = null;
+  private plotUserService: PlotUserRoleService | null = null;
 
   getAuthService(): AuthService {
     if (!this.authService) {
@@ -146,6 +158,20 @@ export class Container {
       this.accessService = createAccessService();
     }
     return this.accessService;
+  }
+
+  getPlotService(): PlotService {
+    if (!this.plotService) {
+      this.plotService = createPlotService();
+    }
+    return this.plotService;
+  }
+
+  getPlotUserRoleService(): PlotUserRoleService {
+    if (!this.plotUserService) {
+      this.plotUserService = createPlotUserRoleServiceDI();
+    }
+    return this.plotUserService;
   }
 }
 

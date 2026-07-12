@@ -145,7 +145,7 @@ export class RoleService {
     }
 
     // Проверка дублирования имени (если меняется)
-    if (validated.name !== undefined && validated.name !== role.name) {
+    if (validated.name !== undefined && validated.name !== null && validated.name !== role.name) {
       const existing = await this.roleRepo.findByName(validated.name);
       if (existing) {
         throw new RoleDuplicateError(validated.name);
@@ -154,7 +154,7 @@ export class RoleService {
 
     try {
       return await this.roleRepo.update(id, {
-        name: role.isSystem ? undefined : validated.name,
+        name: role.isSystem ? undefined : validated.name ?? undefined,
         description: validated.description ?? undefined,
       });
     } catch (error) {
@@ -429,7 +429,7 @@ export class PageService {
     }
 
     // Проверка дублирования path (если меняется)
-    if (validated.path !== undefined && validated.path !== page.path) {
+    if (validated.path !== undefined && validated.path !== null && validated.path !== page.path) {
       const existing = await this.pageRepo.findByPath(validated.path);
       if (existing) {
         throw new PageDuplicateError(validated.path);
@@ -438,11 +438,11 @@ export class PageService {
 
     try {
       return await this.pageRepo.update(id, {
-        path: validated.path,
-        title: validated.title,
+        path: validated.path ?? undefined,
+        title: validated.title ?? undefined,
         groupName: validated.groupName ?? undefined,
-        sortOrder: validated.sortOrder,
-        isActive: validated.isActive,
+        sortOrder: validated.sortOrder ?? undefined,
+        isActive: validated.isActive ?? undefined,
       });
     } catch (error) {
       const prismaError = error as { code?: string };
@@ -582,11 +582,11 @@ export class ApiEndpointService {
 
     try {
       return await this.endpointRepo.update(id, {
-        method: validated.method,
-        path: validated.path,
+        method: validated.method ?? undefined,
+        path: validated.path ?? undefined,
         description: validated.description ?? undefined,
-        accessType: validated.accessType,
-        isActive: validated.isActive,
+        accessType: validated.accessType ?? undefined,
+        isActive: validated.isActive ?? undefined,
       });
     } catch (error) {
       const prismaError = error as { code?: string };

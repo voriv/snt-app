@@ -1,8 +1,29 @@
-'use client';
-
-import { SessionProvider, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+/**
+ * @file src/app/dashboard/layout.tsx
+ * @component DashboardLayout
+ * @category features
+ * @description Корневой layout для всех страниц дашборда с защитой от неавторизованного доступа
+ *
+ * @spec
+ * - Server Component (не использует 'use client')
+ * - Использует getServerSession() из @/lib/auth для проверки сессии
+ * - Состояния:
+ *   - authenticated: рендерит children и AppLayout
+ *   - unauthenticated: редирект на /login
+ * - Не дублирует SessionProvider — используется Providers из корневого layout
+ * - Обработка ошибок: при ошибке сессии — редирект на /login
+ *
+ * @data-flow
+ * - auth() (из @/lib/auth) → получение сессии
+ * - session === null → редирект на /login
+ * - session !== null → рендер детей через AppLayout
+ *
+ * @see docs/user-stories/US-05-реализация-процесса-аутентификации.md — FR-REQ-AUTH-001, AC-4.1, EC-03
+ * @see src/app/layout.tsx — где настроен Providers с SessionProvider
+ * @see src/lib/auth.ts — где настроена конфигурация NextAuth
+ */
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
 import { AppLayout } from '@/components/layouts';
 
 interface DashboardLayoutProps {
@@ -10,55 +31,27 @@ interface DashboardLayoutProps {
 }
 
 /**
- * @component DashboardGuard
- * @description Client Component для защиты маршрутов дашборда
+ * @component DashboardLayout
+ * @description Корневой layout для всех страниц дашборда с защитой от неавторизованного доступа
  *
  * @spec
- * - Использует useSession() для проверки авторизации на клиенте
- * - Показывает spinner во время загрузки сессии
- * - Перенаправляет неавторизованных пользователей на /login
- * - Передаёт session данные в AppLayout через props
+ * - Server Component — нет 'use client'
+ * - Использует getServerSession() из @/lib/auth для проверки сессии
+ * - При отсутствии сессии — редирект на /login
+ * - При наличии сессии — рендерит children через AppLayout
+ * - Не использует SessionProvider (он уже в корневом layout)
+ *
+ * @see docs/user-stories/US-05-реализация-процесса-аутентификации.md — FR-REQ-AUTH-001, AC-4.1
  */
-function DashboardGuard({ children }: DashboardLayoutProps) {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+export default async function DashboardLayout({ children }: DashboardLayoutProps) {
+  // Проверка авторизации через серверную сессию
+  const session = await auth();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      const callbackUrl = window.location.pathname;
-      router.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-    }
-  }, [status, router]);
-
-  if (!mounted || status === 'loading') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+  // Если сессия отсутствует — редирект на /login
+  if (!session) {
+    redirect('/login');
   }
 
+  // Сессия валидна — рендерим контент
   return <AppLayout session={session}>{children}</AppLayout>;
-}
-
-/**
- * @layout dashboard
- * @description Layout для защищённых страниц дашборда
- *
- * @spec
- * - Оборачивает DashboardGuard в SessionProvider для доступа к сессии
- * - Является Server Component, но оборачивает Client Components
- * - Обеспечивает клиентскую аутентификацию для всех страниц внутри
- */
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return (
-    <SessionProvider>
-      <DashboardGuard>{children}</DashboardGuard>
-    </SessionProvider>
-  );
 }
