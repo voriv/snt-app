@@ -155,6 +155,8 @@ export function useUrlState(
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInternalUpdateRef = useRef<boolean>(false);
   const searchParamsKeysRef = useRef<string | null>(null);
+  const stateRef = useRef<UrlState>(state);
+  stateRef.current = state;
 
   /**
    * Парсинг значения параметра URL с учётом типа default
@@ -261,20 +263,23 @@ export function useUrlState(
 
   /**
    * Функция обновления состояния и URL
+   *
+   * КРИТИЧНО: updateUrl (router.push) вызывается как ОТДЕЛЬНАЯ операция после setState,
+   * а НЕ внутри setState updater. Вызов router.push() внутри setState updater приводит
+   * к React-ошибке: "Cannot update a component while rendering a different component"
    */
   const updateState = useCallback<UpdateUrlState>(
     (updater, updateOptions) => {
       const force = updateOptions?.force ?? false;
 
-      setState((prev) => {
-        const newState: UrlState =
-          typeof updater === 'function'
-            ? { ...prev, ...updater(prev) }
-            : { ...prev, ...updater };
+      // Вычисляем новое состояние используя stateRef (актуальное состояние вне render cycle)
+      const prev = stateRef.current;
+      const partial = typeof updater === 'function' ? updater(prev) : updater;
+      const newState: UrlState = { ...prev, ...partial };
 
-        updateUrl(newState, force);
-        return newState;
-      });
+      // setState и updateUrl — две отдельные операции, НЕ вложенные друг в друга
+      setState(newState);
+      updateUrl(newState, force);
     },
     [updateUrl]
   );

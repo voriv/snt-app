@@ -1,6 +1,6 @@
 /**
  * @file prisma/seed.ts
- * @description Сидирование БД: роли, страницы, API endpoints, access_config_version, первый пользователь
+ * @description Сидирование БД: роли, страницы, API endpoints, access_config_version, пользователи
  *
  * @spec
  * - Идемпотентно: использует upsert по уникальным ключам
@@ -9,7 +9,8 @@
  * - Создаёт записи в реестре api_endpoints с accessType
  * - Создаёт начальную запись access_config_version
  * - Мигрирует существующие назначения users.role → user_roles
- * - Создаёт первого пользователя SUPER_ADMIN
+ * - Создаёт первого пользователя SUPER_ADMIN (admin@snt.local)
+ * - Создаёт дополнительных пользователей SUPER_ADMIN (ingvar_v@mail.ru, ingvar_v1@mail.ru)
  *
  * @see docs/model/schema-update-roles-notice.md — Seed данные
  * @see docs/user-stories/US-8-roles-management.md
@@ -37,7 +38,7 @@ const BCRYPT_SALT_ROUNDS = 10;
 async function createFirstSuperAdmin() {
   console.log('🌱 Creating first SUPER_ADMIN user...');
   
-  const password = 'admin123';
+  const password = 'adm2snt';
   const email = 'admin@snt.local';
   const name = 'Администратор';
   
@@ -89,9 +90,78 @@ async function createFirstSuperAdmin() {
   console.log(`  → SUPER_ADMIN role assigned to ${user.email}`);
   
   return user;
-}
-
-const SEED_ROLES = [
+  }
+  
+  /**
+   * Создаёт дополнительных пользователей-суперадминистраторов
+   *
+   * @description Создаёт пользователей с предопределёнными email и паролем,
+   * назначая им роль SUPER_ADMIN. Если пользователь уже существует — пропускает.
+   *
+   * @returns Promise<void>
+   *
+   * @spec
+   * - Создаёт 2 дополнительных пользователя с ролью SUPER_ADMIN
+   * - Проверяет наличие пользователя по email перед созданием
+   * - Хеширует пароль через bcrypt
+   * - Назначает роль SUPER_ADMIN через user_roles таблицу
+   */
+  async function createAdditionalSuperAdmins() {
+    const users = [
+      { email: 'ingvar_v@mail.ru', password: 'urs2snt', name: 'Игорь Воронин' },
+      { email: 'ingvar_v1@mail.ru', password: 'urs2snt', name: 'Игорь Воронин' },
+    ];
+  
+    console.log('🌱 Creating additional SUPER_ADMIN users...');
+  
+    // Ищем роль SUPER_ADMIN один раз
+    const superAdminRole = await prisma.role.findUnique({
+      where: { name: 'SUPER_ADMIN' },
+    });
+  
+    if (!superAdminRole) {
+      console.log('  → SUPER_ADMIN role not found, skipping role assignment for additional users');
+      return;
+    }
+  
+    for (const { email, password, name } of users) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+  
+      if (existingUser) {
+        console.log(`  → User ${email} already exists, skipping creation`);
+        continue;
+      }
+  
+      const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+  
+      const user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          password: passwordHash,
+        },
+      });
+  
+      console.log(`  → User created: ${user.email} (id: ${user.id})`);
+  
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId: { userId: user.id, roleId: superAdminRole.id },
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          roleId: superAdminRole.id,
+        },
+      });
+  
+      console.log(`  → SUPER_ADMIN role assigned to ${user.email}`);
+    }
+  }
+  
+  const SEED_ROLES = [
   { name: 'SUPER_ADMIN', description: 'Супер-администратор. Полный доступ ко всем страницам.', isSystem: true },
   { name: 'ADMIN', description: 'Администратор. Настраиваемая роль.', isSystem: true },
   { name: 'MEMBER', description: 'Член СНТ. Настраиваемая роль.', isSystem: true },
@@ -128,6 +198,9 @@ const SEED_API_ENDPOINTS = [
   { method: 'GET', path: '/roles/:id', accessType: 'super_admin', description: 'Просмотр роли' },
   { method: 'PATCH', path: '/roles/:id', accessType: 'super_admin', description: 'Редактирование роли' },
   { method: 'DELETE', path: '/roles/:id', accessType: 'super_admin', description: 'Удаление роли' },
+  { method: 'GET', path: '/roles/:id/users', accessType: 'super_admin', description: 'Список пользователей роли' },
+  { method: 'POST', path: '/roles/:id/users', accessType: 'super_admin', description: 'Добавление пользователя в роль' },
+  { method: 'DELETE', path: '/roles/:id/users/:userId', accessType: 'super_admin', description: 'Удаление пользователя из роли' },
   { method: 'PATCH', path: '/roles/:id/pages', accessType: 'super_admin', description: 'Назначение страниц роли' },
   { method: 'DELETE', path: '/roles/:id/pages/:pageId', accessType: 'super_admin', description: 'Отзыв страницы у роли' },
   { method: 'PATCH', path: '/roles/:id/api-endpoints', accessType: 'super_admin', description: 'Назначение API endpoints роли' },
@@ -146,6 +219,8 @@ const SEED_API_ENDPOINTS = [
   { method: 'DELETE', path: '/api-endpoints/:id', accessType: 'super_admin', description: 'Удаление API endpoint' },
   // Users management
   { method: 'GET', path: '/users', accessType: 'super_admin', description: 'Поиск пользователей' },
+  { method: 'GET', path: '/users/:id', accessType: 'super_admin', description: 'Просмотр пользователя' },
+  { method: 'GET', path: '/users/:id/connections', accessType: 'super_admin', description: 'Просмотр связей пользователя с участками' },
   // Plot Users management
   { method: 'GET', path: '/plot-users', accessType: 'role', description: 'Список связей пользователь-участок' },
   { method: 'POST', path: '/plot-users', accessType: 'role', description: 'Создание связи пользователь-участок' },
@@ -156,6 +231,17 @@ const SEED_API_ENDPOINTS = [
   // Plot Participants management
   { method: 'GET', path: '/plots/:id/participants', accessType: 'role', description: 'Список участников участка' },
   { method: 'DELETE', path: '/plots/:id/participants/:participantId', accessType: 'role', description: 'Удаление участника из участка' },
+  // Comms - Conversations
+  { method: 'GET', path: '/conversations', accessType: 'role', description: 'Список диалогов' },
+  { method: 'POST', path: '/conversations', accessType: 'role', description: 'Создание диалога' },
+  // Comms - Messages
+  { method: 'GET', path: '/conversations/:id/messages', accessType: 'role', description: 'Сообщения диалога' },
+  { method: 'POST', path: '/conversations/:id/messages', accessType: 'role', description: 'Отправка сообщения' },
+  { method: 'DELETE', path: '/messages/:id', accessType: 'role', description: 'Удаление сообщения' },
+  { method: 'PATCH', path: '/messages/:id', accessType: 'role', description: 'Отметить сообщение как прочитанное' },
+  // Comms - Chats (group)
+  { method: 'GET', path: '/chats', accessType: 'role', description: 'Список групповых чатов' },
+  { method: 'POST', path: '/chats', accessType: 'role', description: 'Создание группового чата' },
 ];
 
 /**
@@ -310,6 +396,9 @@ async function main() {
   
   // Создаём первого супер-администратора
   await createFirstSuperAdmin();
+  
+  // Создаём дополнительных пользователей-суперадминистраторов
+  await createAdditionalSuperAdmins();
   
   console.log('🎉 Seeding completed!');
 }

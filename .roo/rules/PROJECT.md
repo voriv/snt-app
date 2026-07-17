@@ -324,6 +324,9 @@ rmdir /s /q .next
 
 ### 7.6. Service (Бизнес-логика)
 
+> **Детальные правила:** [`service-development.md`](service-development.md)
+> **Пошаговый промпт:** [`service-prompt.md`](../prompt/service-prompt.md)
+
 | Параметр | Значение |
 |----------|----------|
 | **Технологии** | TypeScript classes, Zod, DI |

@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id                String                @id @default(cuid())
-  email             String                @unique @map("email")
-  name              String?               @map("name")
-  password          String                @map("password")
-  createdAt         DateTime              @default(now()) @map("created_at")
-  updatedAt         DateTime              @updatedAt @map("updated_at")
-  plotUserHistories PlotUserRoleHistory[] @relation("HistoryChangedBy")
-  plotUserRoles     PlotUserRole[]
-  profile           UserProfile?
-  roles             UserRole[]
+  id                        String                  @id @default(cuid())
+  email                     String                  @unique @map("email")
+  name                      String?                 @map("name")
+  password                  String                  @map("password")
+  createdAt                 DateTime                @default(now()) @map("created_at")
+  updatedAt                 DateTime                @updatedAt @map("updated_at")
+  plotUserHistories         PlotUserRoleHistory[]   @relation("HistoryChangedBy")
+  plotUserRoles             PlotUserRole[]
+  profile                   UserProfile?
+  roles                     UserRole[]
+  announcements             Announcement[]
+  sentMessages              Message[]
+  conversationParticipants  ConversationParticipant[]
 
   @@map("user")
 }
@@ -35,7 +38,7 @@ model UserProfile {
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
+  
   @@map("user_profiles")
 }
 
@@ -188,4 +191,109 @@ model PlotUserRoleHistory {
   @@index([userId])
   @@index([plotId])
   @@map("plot_user_history")
+}
+
+// ============================================
+// COMMS DOMAIN (US-21-01)
+// ============================================
+
+/// Тип диалога: личный, групповой или обсуждение объявления
+enum ConversationType {
+  DIRECT
+  GROUP
+  ANNOUNCEMENT
+}
+
+/// Роль участника в диалоге
+enum ParticipantRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+/// Диалог (разговор) между пользователями
+model Conversation {
+  id           String             @id @default(cuid())
+  type         ConversationType   @default(DIRECT) @map("type")
+  title        String?            @map("title")
+  description  String?            @map("description") @db.Text
+  plotId       String?            @map("plot_id")
+  createdBy    String             @map("created_by")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+/// Связь пользователь-диалог
+model ConversationParticipant {
+  id             String            @id @default(cuid())
+  conversationId String            @map("conversation_id")
+  userId         String            @map("user_id")
+  role           ParticipantRole   @default(MEMBER) @map("role")
+  joinedAt       DateTime          @default(now()) @map("joined_at")
+  lastReadAt     DateTime?         @map("last_read_at")
+
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+/// Сообщение в диалоге
+model Message {
+  id             String         @id @default(cuid())
+  conversationId String         @map("conversation_id")
+  senderId       String         @map("sender_id")
+  content        String         @map("content")
+  replyToId      String?        @map("reply_to_id")
+  isDeleted      Boolean        @default(false) @map("is_deleted")
+  deletedBy      String?        @map("deleted_by")
+  deletedAt      DateTime?      @map("deleted_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  sender         User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+  }
+  
+  // ============================================
+// ANNOUNCEMENT DOMAIN (US-21-27)
+// ============================================
+
+/// Статус объявления
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Объявление в СНТ
+model Announcement {
+  id           String             @id @default(cuid())
+  title        String             @map("title") @db.VarChar(200)
+  content      String             @map("content") @db.Text
+  authorId     String             @map("author_id")
+  publishedAt  DateTime?          @map("published_at")
+  archivedAt   DateTime?          @map("archived_at")
+  status       AnnouncementStatus @default(DRAFT) @map("status")
+  isImportant  Boolean            @default(false) @map("is_important")
+  viewCount    Int                @default(0) @map("view_count")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@map("announcements")
 }

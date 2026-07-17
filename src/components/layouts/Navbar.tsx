@@ -9,18 +9,21 @@
  * - Отображает аватар пользователя, если он есть
  * - Отображает кнопку выхода с подтверждением
  * - Активное состояние ссылки на странице профиля (AC-6.5)
+ * - Ссылка «Сообщения» с бейджем непрочитанных (US-21-01, AC-1.6)
+ * - Ссылка «Групповые чаты» (US-21-04)
  *
  * @see src/components/layouts/AppLayout.tsx
  */
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Session } from 'next-auth';
 import Link from 'next/link';
 import { cn } from '@/shared/utils';
 import { LogoutButton } from '@/components/features/auth/LogoutButton';
-import { Button } from '@/components/ui';
 import { ThemeToggle } from '@/components/features/userProfile/ThemeToggle';
+import { apiClient } from '@/lib/api-client';
 import type { Theme, UserProfileFull } from '@/domains/userProfile/userProfile.types';
 
 interface NavbarProps {
@@ -35,13 +38,43 @@ export function Navbar({ session, profile, isLoadingProfile = false, currentThem
   const pathname = usePathname();
   const userRoles = session?.user?.roles ?? [];
 
+  // AC-1.6: Загрузка счётчика непрочитанных сообщений
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    let aborted = false;
+    const loadUnread = async () => {
+      try {
+        const response = await apiClient.get<{ items: { unreadCount: number }[]; total: number }>('/conversations');
+        if (!aborted && response.success && response.data) {
+          const total = response.data.items.reduce((sum, item) => sum + item.unreadCount, 0);
+          setUnreadCount(total);
+        }
+      } catch {
+        // Игнорируем ошибку загрузки счётчика
+      }
+    };
+    loadUnread();
+    return () => { aborted = true; };
+  }, []);
+
+  // Сброс счётчика при входе на страницу сообщений
+  useEffect(() => {
+    if (pathname === '/dashboard/messages') {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
+
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Участки', href: '/dashboard/plots' },
+    { name: 'Сообщения', href: '/dashboard/messages', badge: unreadCount > 0 ? unreadCount : undefined },
+    { name: 'Групповые чаты', href: '/dashboard/chats' },
   ];
 
   const adminNavigation = [
     { name: 'Роли', href: '/dashboard/roles' },
+    { name: 'Пользователи', href: '/dashboard/users' },
   ];
 
   const profileLink = { name: 'Профиль', href: '/dashboard/profile' };
@@ -81,6 +114,14 @@ export function Navbar({ session, profile, isLoadingProfile = false, currentThem
                     )}
                   >
                     {item.name}
+                    {'badge' in item && item.badge && (
+                      <span
+                        className="ml-1.5 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full"
+                        aria-label={`${item.badge} непрочитанных сообщений`}
+                      >
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

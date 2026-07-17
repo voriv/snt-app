@@ -32,6 +32,9 @@ import {
   PlotUserRoleService,
   createPlotUserRoleService,
 } from '@/domains/plotUser/plotUser.service';
+import { UsersService } from '@/domains/users/users.service';
+import { UsersRepositoryPrisma } from '@/domains/users/users.repository.prisma';
+import type { IUsersRepository } from '@/domains/users/users.repository.interface';
 import {
   PlotUserRoleRepositoryPrisma,
   PlotUserRoleHistoryRepositoryPrisma,
@@ -40,6 +43,12 @@ import type {
   IPlotUserRoleRepository,
   IPlotUserRoleHistoryRepository,
 } from '@/domains/plotUser/plotUser.repository.interface';
+import { CommsService } from '@/domains/comms/comms.service';
+import { PrismaCommsRepository } from '@/domains/comms/comms.repository.prisma';
+import type { ICommsRepository } from '@/domains/comms/comms.repository.interface';
+import { AnnouncementService } from '@/domains/announcement/announcement.service';
+import { AnnouncementRepositoryPrisma } from '@/domains/announcement/announcement.repository.prisma';
+import type { IAnnouncementRepository } from '@/domains/announcement/announcement.repository.interface';
 
 // Factory function to create AuthService with injected dependencies
 export function createAuthService(): AuthService {
@@ -97,6 +106,25 @@ export function createPlotUserRoleServiceDI(): PlotUserRoleService {
   return createPlotUserRoleService(plotUserRoleRepo, historyRepo);
 }
 
+// Factory function to create UsersService with injected dependencies
+export function createUsersService(): UsersService {
+  const repository: IUsersRepository = new UsersRepositoryPrisma();
+  const plotUserRoleService = createPlotUserRoleServiceDI();
+  return new UsersService(repository, plotUserRoleService);
+}
+
+// Factory function to create CommsService with injected dependencies
+export function createCommsService(): CommsService {
+  const repository: ICommsRepository = new PrismaCommsRepository();
+  return new CommsService(repository);
+}
+
+// Factory function to create AnnouncementService with injected dependencies
+export function createAnnouncementService(): AnnouncementService {
+  const repository: IAnnouncementRepository = new AnnouncementRepositoryPrisma();
+  return new AnnouncementService(repository);
+}
+
 // Container for managing dependencies
 export class Container {
   private authService: AuthService | null = null;
@@ -108,6 +136,9 @@ export class Container {
   private accessService: AccessService | null = null;
   private plotService: PlotService | null = null;
   private plotUserService: PlotUserRoleService | null = null;
+  private usersService: UsersService | null = null;
+  private commsService: CommsService | null = null;
+  private announcementService: AnnouncementService | null = null;
 
   getAuthService(): AuthService {
     if (!this.authService) {
@@ -172,6 +203,27 @@ export class Container {
       this.plotUserService = createPlotUserRoleServiceDI();
     }
     return this.plotUserService;
+  }
+
+  getUsersService(): UsersService {
+    if (!this.usersService) {
+      this.usersService = createUsersService();
+    }
+    return this.usersService;
+  }
+
+  getCommsService(): CommsService {
+    if (!this.commsService) {
+      this.commsService = createCommsService();
+    }
+    return this.commsService;
+  }
+
+  getAnnouncementService(): AnnouncementService {
+    if (!this.announcementService) {
+      this.announcementService = createAnnouncementService();
+    }
+    return this.announcementService;
   }
 }
 

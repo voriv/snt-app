@@ -1,2 +1,2 @@
-export { ThemeSelector } from './ThemeSelector/ThemeSelector';
-export type { ThemeSelectorProps } from './ThemeSelector/ThemeSelector';
+export { ThemeSelector } from './ThemeSelector';
+export type { ThemeSelectorProps } from './ThemeSelector';

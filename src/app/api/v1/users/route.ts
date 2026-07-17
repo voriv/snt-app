@@ -1,6 +1,6 @@
 /**
  * @file users/route.ts
- * @description Route handler для поиска пользователей (UserSearch при добавлении участников в роль)
+ * @description Route handler для списка пользователей
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getContainer } from '@/di/container';
@@ -8,26 +8,32 @@ import { withRoleGuard } from '@/app/api/v1/_shared/with-role-guard';
 import type { BaseError } from '@/shared/errors';
 
 /**
- * @route GET /api/v1/users?q=<query>
+ * @route GET /api/v1/users
  * @auth required
  * @role SUPER_ADMIN
- * @description Поиск пользователей по email или имени для добавления в роль
+ * @description Список пользователей с пагинацией, поиском и сортировкой
  *
- * @query q — строка поиска (минимум 2 символа)
- * @response 200 { success: true, data: UserData[] }
- * @response 400 { success: false, error: { code: 'VALIDATION_ERROR', message: string } }
+ * @query page — номер страницы (default: 1)
+ * @query limit — количество записей (default: 25, max: 100)
+ * @query q — текст поиска по email, firstName, lastName (опционально)
+ * @query sort — поле сортировки: email, firstName, lastName, createdAt (default: createdAt)
+ * @query order — направление сортировки: asc, desc (default: desc)
+ * @response 200 { success: true, data: { items: UserListItem[], total: number, page: number, limit: number } }
+ * @response 400 { success: false, error: { code: string, message: string } }
+ * @response 403 { success: false, error: { code: string, message: string } }
  *
- * @spec - Поиск по частичному совпадению email или name, case-insensitive, максимум 20 результатов
+ * @spec
+ * - Пагинация через query параметры page/limit
+ * - Поиск через query параметр q (по email, firstName, lastName)
+ * - Сортировка через query параметры sort/order
+ * - Доступ только для SUPER_ADMIN
  */
 async function handleGet(request: NextRequest) {
   try {
-    const q = request.nextUrl.searchParams.get('q') ?? '';
-    if (q.trim().length < 2) {
-      return NextResponse.json({ success: true, data: [] });
-    }
-    const service = getContainer().getRoleService();
-    const users = await service.searchUsers(q);
-    return NextResponse.json({ success: true, data: users });
+    const service = getContainer().getUsersService();
+    const query = Object.fromEntries(request.nextUrl.searchParams.entries());
+    const result = await service.findAllUsers(query);
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return errorResponse(error);
   }

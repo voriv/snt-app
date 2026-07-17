@@ -145,6 +145,122 @@ Enum plot_user_status_enum {
   expired
 }
 
+Enum conversation_type {
+  DIRECT [note: 'Личный диалог']
+  GROUP [note: 'Групповой чат']
+  ANNOUNCEMENT [note: 'Чат обсуждения объявления']
+}
+
+Enum participant_role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================
+// Table: conversations (US-21-01)
+// ============================================
+Table conversations {
+  id           varchar       [pk, not null] // cuid()
+  type         varchar       [not null, default: 'DIRECT', ref: > conversation_type]
+  title        varchar
+  plot_id      varchar       [ref: > plots.id]
+  created_by   varchar       [not null, ref: > users.id]
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Foreign keys: plot_id -> plots.id (optional), created_by -> users.id
+    Default type: DIRECT
+    '''
+}
+
+// ============================================
+// Table: conversation_participants (US-21-01)
+// ============================================
+Table conversation_participants {
+  id                   varchar       [pk, not null] // cuid()
+  conversation_id      varchar       [not null, ref: > conversations.id]
+  user_id              varchar       [not null, ref: > users.id]
+  role                 varchar       [not null, default: 'MEMBER', ref: > participant_role]
+  joined_at            timestamp     [default: now(), not null]
+  last_read_at         timestamp
+
+  indexes {
+    (conversation_id, user_id) [unique, name: 'unique_conversation_user']
+    user_id
+  }
+
+  Notes:'''
+    Primary key: id
+    Foreign keys: conversation_id -> conversations.id, user_id -> users.id
+    Unique constraint: (conversation_id, user_id)
+    '''
+}
+
+// ============================================
+// Table: messages (US-21-01)
+// ============================================
+Table messages {
+  id              varchar       [pk, not null] // cuid()
+  conversation_id varchar       [not null, ref: > conversations.id]
+  sender_id       varchar       [not null, ref: > users.id]
+  content         varchar       [not null]
+  reply_to_id     varchar       [ref: > messages.id]
+  is_deleted      boolean       [not null, default: false]
+  deleted_by      varchar       [ref: > users.id]
+  deleted_at      timestamp
+  created_at      timestamp     [default: now(), not null]
+  updated_at      timestamp     [default: now(), not null]
+
+  indexes {
+    (conversation_id, created_at)
+  }
+
+  Notes:'''
+    Primary key: id
+    Foreign keys: conversation_id -> conversations.id, sender_id -> users.id, reply_to_id -> messages.id, deleted_by -> users.id
+    Soft-delete support via is_deleted flag
+    '''
+}
+
+// ============================================
+// Table: announcements (US-21-27)
+// ============================================
+Table announcements {
+  id            varchar       [pk, not null] // cuid()
+  title         varchar       [not null]
+  content       varchar       [not null]
+  author_id     varchar       [not null, ref: > users.id]
+  published_at  timestamp
+  archived_at   timestamp
+  status        varchar       [not null, default: 'DRAFT', ref: > announcement_status]
+  is_important  boolean       [not null, default: false]
+  view_count    int           [not null, default: 0]
+  created_at    timestamp     [default: now(), not null]
+  updated_at    timestamp     [default: now(), not null]
+
+  indexes {
+    (status, published_at)
+    author_id
+  }
+
+  Notes:'''
+    Primary key: id
+    Foreign key: author_id -> users.id
+    Default status: DRAFT
+    Default view_count: 0
+    Default is_important: false
+    '''
+}
+
+Enum announcement_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 // ============================================
 // Relationships
 // ============================================
@@ -155,3 +271,12 @@ Ref: plot_user_history.plot_user_id > plot_users.id
 Ref: plot_user_history.user_id > users.id
 Ref: plot_user_history.plot_id > plots.id
 Ref: plot_user_history.changed_by > users.id
+Ref: conversations.plot_id > plots.id
+Ref: conversations.created_by > users.id
+Ref: conversation_participants.conversation_id > conversations.id
+Ref: conversation_participants.user_id > users.id
+Ref: messages.conversation_id > conversations.id
+Ref: messages.sender_id > users.id
+Ref: messages.reply_to_id > messages.id
+Ref: messages.deleted_by > users.id
+Ref: announcements.author_id > users.id

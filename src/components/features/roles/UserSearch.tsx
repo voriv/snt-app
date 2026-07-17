@@ -57,7 +57,7 @@ export function UserSearch({
     setIsLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const response = await apiClient.get<UserData[]>(`/users?q=${encodeURIComponent(trimmed)}`);
+        const response = await apiClient.get<UserData[]>(`/users/search?q=${encodeURIComponent(trimmed)}`);
         if (response.success && response.data) {
           setResults(response.data.filter(u => !excludeUserIds.includes(u.id)));
         } else {
