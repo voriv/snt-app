@@ -33,7 +33,12 @@ describe('UserProfileRepository (Integration)', () => {
   beforeEach(async () => {
     // Очищаем таблицы перед каждым тестом в этом describe-блоке
     await prismaForTest.userProfile.deleteMany();
-    await prismaForTest.user.deleteMany();
+    // Сохраняем глобальных тестовых пользователей (нужны для roles.test.ts)
+    await prismaForTest.user.deleteMany({
+      where: {
+        NOT: { email: { contains: 'test-search-user' } },
+      },
+    });
   });
 
   describe('findById', () => {

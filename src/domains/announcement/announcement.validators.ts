@@ -22,16 +22,19 @@ export const AnnouncementStatusSchema = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED'
  * - search: опциональный текст поиска (минимум 2 символа)
  */
 export const AnnouncementListQuerySchema = z.object({
-  page: z
-    .string()
-    .optional()
-    .transform(val => (val ? parseInt(val, 10) : 1))
-    .pipe(z.number().min(1, 'Номер страницы должен быть не менее 1').default(1)),
-  limit: z
-    .string()
-    .optional()
-    .transform(val => (val ? parseInt(val, 10) : 20))
-    .pipe(z.number().min(1, 'Количество записей должно быть не менее 1').max(100, 'Количество записей не может превышать 100').default(20)),
+  page: z.coerce
+    .number()
+    .int('Номер страницы должен быть целым числом')
+    .min(1, 'Номер страницы должен быть не менее 1')
+    .default(1)
+    .optional(),
+  limit: z.coerce
+    .number()
+    .int('Количество записей должно быть целым числом')
+    .min(1, 'Количество записей должно быть не менее 1')
+    .max(100, 'Количество записей не может превышать 100')
+    .default(20)
+    .optional(),
   status: AnnouncementStatusSchema.optional(),
   search: z.string().min(2, 'Текст поиска должен содержать минимум 2 символа').optional(),
 });

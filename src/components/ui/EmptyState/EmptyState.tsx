@@ -34,10 +34,10 @@ export function EmptyState({
 }: EmptyStateProps): React.JSX.Element {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--theme-bg-secondary)]">
         {icon ?? (
           <svg
-            className="h-8 w-8 text-gray-400"
+            className="h-8 w-8 text-[var(--theme-text-secondary)]"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
@@ -51,8 +51,8 @@ export function EmptyState({
           </svg>
         )}
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-gray-900">{title}</h3>
-      <p className="mt-2 text-sm text-gray-500 max-w-sm">{description}</p>
+      <h3 className="mt-4 text-lg font-semibold text-[var(--theme-text-primary)]">{title}</h3>
+      <p className="mt-2 text-sm text-[var(--theme-text-secondary)] max-w-sm">{description}</p>
     </div>
   );
 }

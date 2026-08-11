@@ -197,19 +197,31 @@ export class UsersRepositoryPrisma implements IUsersRepository {
   }
 
   /**
-   * Поиск пользователей для выбора собеседника
+   * Поиск пользователей для выбора собеседника.
    *
-   * @param query - Текст поиска (по email, firstName, lastName)
+   * Выполняет поиск по подстроке `query` (содержит case-insensitive совпадение)
+   * по следующим полям:
+   * - `email` — `User.email` (`{ contains: query, mode: 'insensitive' }`)
+   * - `name` — `User.name` (`{ not: null, contains: query, mode: 'insensitive' }`)
+   * - `profile.first_name` — `UserProfile.first_name`
+   *   (`{ contains: query, mode: 'insensitive' }`)
+   * - `profile.last_name` — `UserProfile.last_name`
+   *   (`{ contains: query, mode: 'insensitive' }`)
+   *
+   * Все ветки объединены через `OR` с `mode: 'insensitive'`. Текущий
+   * пользователь (`excludeUserId`) исключается из результатов.
+   *
+   * @param query - Текст поиска (по email, name, profile.first_name, profile.last_name)
    * @param excludeUserId - ID пользователя для исключения (текущий пользователь)
    * @param limit - Максимальное количество результатов (default: 20, max: 50)
-   * @returns Массив результатов поиска
+   * @returns Массив результатов поиска (`UserSearchResult[]`)
    *
-   * @spec
-   * - LEFT JOIN user_profiles для firstName, lastName, avatar
-   * - Фильтр: исключаем пользователя с excludeUserId
-   * - Поиск по email, firstName, lastName (contains + insensitive)
-   * - Сортировка по relevance (без явной сортировки — по умолчанию)
-   * - Лимит: максимум 50
+   * @spec B-030 (симптом 1) — поиск по email подтверждён:
+   * email-ветка `{ email: { contains: query, mode: 'insensitive' } }`
+   * присутствует в `OR` фильтра `searchUsers`.
+   *
+   * @see docs/specs/comms/B-030-component-spec.md — раздел T1-1
+   * @see docs/plans/REQ-COMMS-004-B030-plan.md — задача T1-1
    */
   async searchUsers(
     query: string,

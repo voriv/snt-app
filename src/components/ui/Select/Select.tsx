@@ -16,7 +16,7 @@ export function Select({ label, error, className, children, id, ...props }: Sele
       {label && (
         <label
           htmlFor={selectId}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-[var(--theme-text-primary)] mb-1"
         >
           {label}
         </label>
@@ -24,8 +24,8 @@ export function Select({ label, error, className, children, id, ...props }: Sele
       <select
         id={selectId}
         className={cn(
-          'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2',
-          error && 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500',
+          'block w-full rounded-md border-[var(--theme-input-border)] bg-[var(--theme-input-bg)] text-[var(--theme-input-text)] shadow-sm focus:border-[var(--theme-accent)] focus:ring-[var(--theme-accent)] sm:text-sm px-3 py-2',
+          error && 'border-[var(--theme-danger)] focus:border-[var(--theme-danger)] focus:ring-[var(--theme-danger)]',
           className,
         )}
         {...props}
@@ -33,7 +33,7 @@ export function Select({ label, error, className, children, id, ...props }: Sele
         {children}
       </select>
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p className="mt-1 text-sm text-[var(--theme-danger)]">{error}</p>
       )}
     </div>
   );

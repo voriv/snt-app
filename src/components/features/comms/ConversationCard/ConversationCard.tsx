@@ -7,7 +7,7 @@
  * ```tsx
  * <ConversationCard
  *   conversation={item}
- *   onClick={() => router.push(`/dashboard/messages/${item.conversationId}`)}
+ *   onClick={() => router.push(`/dashboard/comms/messages/${item.conversationId}`)}
  * />
  * ```
  *
@@ -93,7 +93,6 @@ function getInitials(name: string): string {
  */
 export function ConversationCard({ conversation, onClick }: ConversationCardProps): React.JSX.Element {
   const {
-    conversationId,
     participantName,
     participantAvatar,
     lastMessagePreview,
@@ -121,8 +120,8 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
       tabIndex={0}
       aria-label={`Диалог с ${participantName}. ${unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Нет непрочитанных'}. Последнее сообщение: ${displayTime}`}
       className={cn(
-        'flex items-center gap-3 p-4 rounded-lg cursor-pointer transition-colors',
-        'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+        'group flex items-center gap-3 p-4 rounded-lg cursor-pointer transition-colors',
+        'hover:bg-[var(--theme-bg-secondary)] focus:outline-none focus:ring-2 focus:ring-indigo-500',
       )}
       onClick={onClick}
       onKeyDown={handleKeyDown}
@@ -133,10 +132,10 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
           <img
             src={participantAvatar}
             alt={`Аватар ${participantName}`}
-            className="h-12 w-12 rounded-full object-cover"
+            className="h-10 w-10 rounded-full object-cover"
           />
         ) : (
-          <div className="h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold text-sm">
+          <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold text-sm">
             {displayInitials}
           </div>
         )}
@@ -145,11 +144,11 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
       {/* Информация о диалоге */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-gray-900 truncate">
+          <p className="text-sm font-medium text-[var(--theme-text-primary)] truncate">
             {participantName}
           </p>
           <div className="flex items-center gap-2">
-            <time className="text-xs text-gray-500 whitespace-nowrap">
+            <time className="text-xs text-[var(--theme-text-secondary)] whitespace-nowrap">
               {displayTime}
             </time>
             {unreadCount > 0 && (
@@ -161,9 +160,22 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
         </div>
 
         {/* Превью последнего сообщения */}
-        <p className="text-sm text-gray-500 truncate mt-0.5">
-          {displayPreview || <span className="text-gray-400 italic">Нет сообщений</span>}
+        <p className="text-sm text-[var(--theme-text-secondary)] truncate mt-0.5">
+          {displayPreview || <span className="text-[var(--theme-text-secondary)] italic">Нет сообщений</span>}
         </p>
+      </div>
+
+      {/* Стрелка-индикатор (R-29, T5) */}
+      <div className="flex-shrink-0">
+        <svg
+          className="h-4 w-4 text-[var(--theme-text-secondary)] transition-transform group-hover:translate-x-0.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
       </div>
     </div>
   );

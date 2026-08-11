@@ -115,7 +115,7 @@ export function AnnouncementForm({ onSuccess }: AnnouncementFormProps) {
       await apiClient.post('/announcements', data);
 
       onSuccess?.();
-      router.push('/dashboard/announcements');
+      router.push('/dashboard/comms/announcements');
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message || 'Произошла ошибка при сохранении объявления');

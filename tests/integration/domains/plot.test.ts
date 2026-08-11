@@ -32,7 +32,12 @@ describe('PlotRepository (Integration)', () => {
     await prisma.plotUserRoleHistory.deleteMany();
     await prisma.plotUserRole.deleteMany();
     await prisma.plot.deleteMany();
-    await prisma.user.deleteMany();
+    // Сохраняем глобальных тестовых пользователей (нужны для roles.test.ts)
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: { contains: 'test-search-user' } },
+      },
+    });
     
     repo = new PlotRepositoryPrisma(prisma);
   });
@@ -366,7 +371,12 @@ afterEach(async () => {
   await prisma.plotUserRoleHistory.deleteMany();
   await prisma.plotUserRole.deleteMany();
   await prisma.plot.deleteMany();
-  await prisma.user.deleteMany();
+  // Сохраняем глобальных тестовых пользователей (нужны для roles.test.ts)
+  await prisma.user.deleteMany({
+    where: {
+      NOT: { email: { contains: 'test-search-user' } },
+    },
+  });
 });
 
 describe('PlotService (Integration)', () => {
@@ -378,7 +388,12 @@ describe('PlotService (Integration)', () => {
     await prisma.plotUserRoleHistory.deleteMany();
     await prisma.plotUserRole.deleteMany();
     await prisma.plot.deleteMany();
-    await prisma.user.deleteMany();
+    // Сохраняем глобальных тестовых пользователей (нужны для roles.test.ts)
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: { contains: 'test-search-user' } },
+      },
+    });
     
     repo = new PlotRepositoryPrisma(prisma);
     service = new PlotService(repo);

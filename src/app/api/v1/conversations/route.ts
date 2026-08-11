@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getContainer } from '@/di/container';
 import { auth } from '@/lib/auth';
 import type { BaseError } from '@/shared/errors';
+import { ConversationAlreadyExistsError } from '@/domains/comms/comms.errors';
+import { ZodError } from 'zod';
 
 /**
  * @route GET /api/v1/conversations
@@ -57,18 +59,25 @@ export const GET = handleGet;
  * @description Начать новый личный диалог с пользователем
  *
  * @body { participantId: string } — ID собеседника
- * @response 201 { success: true, data: { conversationId: string, isNew: boolean } }
+ * @response 201 { success: true, data: { conversationId: string, isNew: true } }
  * @response 400 { success: false, error: { code: string, message: string } }
  * @response 401 { success: false, error: { code: string, message: string } }
  * @response 403 { success: false, error: { code: string, message: string } }
- * @response 409 { success: false, error: { code: string, message: string } }
+ * @response 409 { success: false, error: { code: 'CONVERSATION_ALREADY_EXISTS', message: string }, data: { conversationId: string, isNew: false } }
  *
  * @spec
  * - Требуется авторизация
- * - Если диалог уже существует — возвращает его с isNew=false (статус 200)
- * - Если диалога нет — создаёт новый и возвращает с isNew=true (статус 201)
+ * - Если диалога нет — создаёт новый и возвращает 201 с isNew=true
+ * - Если диалог уже существует — возвращает 409 с conversationId и isNew=false
+ *   (B-029: ConversationAlreadyExistsError обрабатывается ДО generic errorResponse)
+ * - Race condition (P2002 на pair_key) также приводит к 409 (через DuplicateConversationError
+ *   → ConversationAlreadyExistsError в service-слое)
  * - Нельзя написать самому себе (400)
  * - Нельзя написать заблокированному пользователю (400)
+ *
+ * @covers AC-01 (REQ-COMMS-004) — создание нового диалога → 201
+ * @covers AC-02 (REQ-COMMS-004) — существующий диалог → 409 с conversationId
+ * @covers AC-03 (REQ-COMMS-004) — race condition → 409 (через service)
  */
 async function handlePost(request: NextRequest) {
   try {
@@ -87,9 +96,27 @@ async function handlePost(request: NextRequest) {
 
     const result = await service.startConversation(userId, body);
 
-    const status = result.isNew ? 201 : 200;
-    return NextResponse.json({ success: true, data: result }, { status });
+    // B-029: Новый диалог создан — всегда 201 с isNew=true
+    return NextResponse.json(
+      { success: true, data: { conversationId: result.conversationId, isNew: true } },
+      { status: 201 }
+    );
   } catch (error) {
+    // ⚠️ P2-3: Специфическая обработка ConversationAlreadyExistsError ДО generic errorResponse().
+    // Service-слой бросает ConversationAlreadyExistsError (как при обнаружении существующего
+    // диалога, так и при race condition — DuplicateConversationError → ConversationAlreadyExistsError).
+    // Возвращаем 409 с conversationId для редиректа клиента.
+    if (error instanceof ConversationAlreadyExistsError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'CONVERSATION_ALREADY_EXISTS', message: error.message },
+          data: { conversationId: error.conversationId, isNew: false },
+        },
+        { status: 409 }
+      );
+    }
+    // Generic обработка всех остальных ошибок
     return errorResponse(error);
   }
 }
@@ -97,6 +124,16 @@ async function handlePost(request: NextRequest) {
 export const POST = handlePost;
 
 function errorResponse(error: unknown): NextResponse {
+  // B-030: ZodError (пустой/отсутствующий participantId) → 400, а не 500.
+  // ZodError не является BaseError (нет code/statusCode) → без этой ветки
+  // он попадал бы в generic-обработчик как UNKNOWN_ERROR со статусом 500.
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Некорректные данные запроса' } },
+      { status: 400 }
+    );
+  }
+
   if (error instanceof Error && 'code' in error) {
     const baseError = error as BaseError;
     return NextResponse.json(
@@ -105,7 +142,7 @@ function errorResponse(error: unknown): NextResponse {
     );
   }
   return NextResponse.json(
-    { success: false, error: { code: 'UNKNOWN_ERROR', message: (error as Error).message || 'Unknown error' } },
+    { success: false, error: { code: 'INTERNAL_ERROR', message: 'Внутренняя ошибка сервера' } },
     { status: 500 }
   );
 }

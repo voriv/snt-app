@@ -27,12 +27,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants = {
       primary:
-        'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
+        'bg-[var(--theme-accent)] text-white hover:opacity-90 focus:ring-[var(--theme-accent)]',
       secondary:
-        'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-indigo-500',
+        'bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-color)] hover:bg-[var(--theme-bg-secondary)] focus:ring-[var(--theme-accent)]',
       danger:
-        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+        'bg-[var(--theme-danger)] text-white hover:opacity-90 focus:ring-[var(--theme-danger)]',
+      ghost: 'bg-transparent text-[var(--theme-text-primary)] hover:bg-[var(--theme-bg-secondary)] focus:ring-[var(--theme-accent)]',
     };
 
     const sizes = {

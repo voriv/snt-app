@@ -39,7 +39,7 @@ function ErrorMessage({ message, className }: ErrorMessageProps): React.JSX.Elem
       role="alert"
       aria-live="polite"
       className={cn(
-        'rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2',
+        'rounded-md bg-[var(--theme-danger)]/10 px-4 py-3 text-sm text-[var(--theme-danger)] flex items-start gap-2',
         className
       )}
     >

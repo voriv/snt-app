@@ -1,0 +1,65 @@
+# зависимости
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-error.log*
+
+# окружение
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.prod.example
+
+# сборка
+.next/
+out/
+build/
+dist/
+
+# файлы разработки
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# тесты
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# git
+.git/
+.gitignore
+.gitattributes
+
+# документация
+docs/
+plans/
+README.md
+CHANGELOG.md
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# временные файлы
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# скрипты разработки
+scripts/
+
+# тестовые файлы
+.env.test
+.eslintrc.js

@@ -1,13 +1,20 @@
 /**
  * @component AppLayout
- * @description Обёртка для страниц авторизованной зоны
+ * @description Обёртка для страниц авторизованной зоны.
  *
- * @spec
+ * @spec docs/specs/nav/component-spec.md → 3.4.2
+ * @task NAV-05-T3, NAV-06-T3
+ *
+ * @covers AC-NAV-05-1 — Sidebar на дашборде
+ * @covers AC-NAV-05-5 — Скрытие sidebar на мобильных
+ * @covers AC-NAV-06-1 — Breadcrumbs на страницах дашборда
+ *
  * - Отображает контент страницы
  * - Контейнер для страниц авторизованной зоны
  * - Все страницы внутри dashboard/* используют этот layout
  * - Передаёт данные сессии и профиля в Navbar
  * - Управляет темой оформления (светлая/тёмная/зелёная)
+ * - Интегрирует Sidebar (desktop) и Breadcrumbs (desktop)
  *
  * @data-flow
  * - DashboardLayout (SSR) → SessionWrapper (Client) → AppLayout (Client) → Navbar (Client) → children
@@ -18,6 +25,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/layouts/Navbar';
+import { Sidebar } from '@/components/layouts/Sidebar';
+import { Breadcrumbs } from '@/components/layouts/Breadcrumbs';
 import { Session } from 'next-auth';
 import { useTheme } from '@/hooks/useTheme';
 import type { Theme, UserProfileFull } from '@/domains/userProfile/userProfile.types';
@@ -70,7 +79,10 @@ export function AppLayout({ children, session }: AppLayoutProps) {
   }, [setTheme]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    // B-023: flex-цепочка для sticky-низа контрола ввода сообщений.
+    // .h-dvh-full (100vh → 100dvh fallback) фиксирует высоту корня, flex flex-col
+    // передаёт высоту вниз, min-h-0 на контейнерах предотвращает переполнение flex-детей.
+    <div className="h-dvh-full bg-gray-50 flex flex-col">
       <Navbar
         session={session}
         profile={profile}
@@ -78,9 +90,15 @@ export function AppLayout({ children, session }: AppLayoutProps) {
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
       />
-      <main className="py-6">
-        {children}
-      </main>
+      <div className="flex flex-1 min-h-0">
+        <Sidebar />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Breadcrumbs />
+          <main className="flex-1 min-h-0 flex flex-col py-6">
+            {children}
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

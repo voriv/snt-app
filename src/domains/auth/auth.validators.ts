@@ -56,3 +56,32 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * @function changePasswordSchema
+ * @domain auth
+ * @description Zod-схема валидации данных смены пароля пользователем
+ *
+ * @spec
+ * - currentPassword: обязателен, строка, БЕЗ trim — пробелы часть пароля
+ * - newPassword: обязателен, строка, минимум 6 символов, БЕЗ trim
+ * - confirmPasswordNew: обязателен, строка, должен совпадать с newPassword через .refine()
+ * - Ошибки валидации: пользовательские сообщения на русском языке
+ *
+ * @see docs/requirements/REQ-AUTH-001.md — BR-08..BR-12, FR-09..FR-12
+ * @see docs/user-stories/US-12-активная-смена-пароля-пользователем.md
+ */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string({ required_error: 'Текущий пароль обязателен' }),
+    newPassword: z
+      .string({ required_error: 'Новый пароль обязателен' })
+      .min(6, 'Пароль должен содержать минимум 6 символов'),
+    confirmPasswordNew: z.string({ required_error: 'Подтверждение пароля обязательно' }),
+  })
+  .refine((data) => data.newPassword === data.confirmPasswordNew, {
+    message: 'Пароли не совпадают',
+    path: ['confirmPasswordNew'],
+  });
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

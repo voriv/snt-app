@@ -11,18 +11,22 @@ import { ZodError } from 'zod';
 /**
  * @route GET /api/v1/conversations/:id/messages
  * @auth required
- * @description Получить все сообщения диалога
+ * @description Получить все сообщения диалога со статусом прочтения
  *
  * @param id - ID диалога
- * @response 200 { success: true, data: Message[] }
+ * @response 200 { success: true, data: MessageWithReadStatus[] }
  * @response 401 { success: false, error: { code: string, message: string } }
  * @response 403 { success: false, error: { code: string, message: string } }
  * @response 404 { success: false, error: { code: string, message: string } }
  *
+ * @covers AC-1, AC-2, AC-3, AC-6 (US-39-02)
+ * @see component-spec.md → 3.2.4
+ *
  * @spec
  * - Требуется авторизация
  * - Пользователь должен быть участником диалога
- * - Возвращает все сообщения включая удалённые (фильтрация на уровне UI)
+ * - Для DIRECT: возвращает isReadByRecipient (прочитано ли собеседником)
+ * - Для GROUP: возвращает readByCount и totalParticipants
  */
 async function handleGet(
   request: NextRequest,
@@ -41,7 +45,7 @@ async function handleGet(
     const userId = session.user.id;
     const service = getContainer().getCommsService();
 
-    const messages = await service.getConversationMessages(conversationId, userId);
+    const messages = await service.getMessagesWithReadStatus(conversationId, userId);
 
     return NextResponse.json({ success: true, data: messages });
   } catch (error) {

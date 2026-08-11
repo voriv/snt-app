@@ -1,0 +1,44 @@
+# Глобальный беклог задач проекта СНТ "Берёзки-НТ"
+# Версия: 1.0
+# Дата: 2026-08-10
+# Автообновление: scripts/backlog.js
+
+tasks:
+  - id: "B-010"
+    title: "Система платежей и задолженности"
+    description: "Учёт платежей (членские/целевые взносы, пени), расчёт задолженности, ставки взносов, уведомления должников"
+    priority: "high"
+    status: "todo"
+    phase: "req"
+    epic: "PAYMENTS"
+    labels:
+      - "api"
+      - "ui"
+      - "db"
+    depends:
+      - "B-003"
+      - "B-004"
+    artifacts:
+      requirements:
+        - "REQ-PAYMENTS-001"
+      user_stories: []
+      model: []
+    created: "2026-07-01"
+    updated: "2026-07-01"
+  - id: "B-012"
+    title: "Документация API (OpenAPI/Swagger)"
+    description: "Сгенерировать OpenAPI-спецификацию по существующим API-роутам, добавить Swagger UI"
+    priority: "low"
+    status: "todo"
+    phase: "doc"
+    epic: "INFRA"
+    labels:
+      - "docs"
+      - "api"
+    depends: []
+    artifacts:
+      requirements: []
+      user_stories: []
+      model: []
+    created: "2026-07-25"
+    updated: "2026-07-25"

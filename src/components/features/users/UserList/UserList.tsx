@@ -1,7 +1,8 @@
 /**
  * @component UserList
  * @category features/users
- * @description Таблица списка пользователей с пагинацией, поиском и сортировкой
+ * @description Таблица списка пользователей с пагинацией, поиском и сортировкой.
+ * Адаптирован под темы (light/dark/green) через CSS-переменные var(--theme-*) (B-013)
  *
  * @spec
  * - Загружает данные через apiClient.getWithQuery('/users', { page, limit, q, sort, order })
@@ -164,9 +165,9 @@ export function UserList(): ReactElement {
    */
   const renderSortIcon = (field: UserSortField) => {
     if (sort.field !== field) {
-      return <span className="text-gray-300 ml-1">↕</span>;
+      return <span className="text-[var(--theme-text-secondary)] ml-1">↕</span>;
     }
-    return <span className="text-indigo-600 ml-1">{sort.order === 'asc' ? '▲' : '▼'}</span>;
+    return <span className="text-[var(--theme-accent)] ml-1">{sort.order === 'asc' ? '▲' : '▼'}</span>;
   };
 
   if (isLoading && !searchQuery) {
@@ -174,7 +175,7 @@ export function UserList(): ReactElement {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-          <p className="mt-4 text-sm text-gray-500">Загрузка данных...</p>
+          <p className="mt-4 text-sm text-[var(--theme-text-secondary)]">Загрузка данных...</p>
         </div>
       </div>
     );
@@ -184,13 +185,13 @@ export function UserList(): ReactElement {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--theme-badge-danger-bg)]">
             <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900">Ошибка</h3>
-          <p className="mt-2 text-sm text-gray-500 max-w-sm">{error}</p>
+          <h3 className="mt-4 text-lg font-semibold text-[var(--theme-text-primary)]">Ошибка</h3>
+          <p className="mt-2 text-sm text-[var(--theme-text-secondary)] max-w-sm">{error}</p>
         </div>
       </div>
     );
@@ -203,50 +204,50 @@ export function UserList(): ReactElement {
 
       {/* Таблица */}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-[var(--theme-border-color)]">
+          <thead className="bg-[var(--theme-bg-secondary)]">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--theme-text-secondary)] uppercase tracking-wider">
                 <button
                   type="button"
                   onClick={() => handleSort('email')}
-                  className="flex items-center hover:text-gray-700 focus:outline-none"
+                  className="flex items-center hover:text-[var(--theme-text-primary)] focus:outline-none"
                   aria-label={`Сортировать по ${COLUMN_LABELS.email}`}
                 >
                   {COLUMN_LABELS.email}
                   {renderSortIcon('email')}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--theme-text-secondary)] uppercase tracking-wider">
                 <button
                   type="button"
                   onClick={() => handleSort('firstName')}
-                  className="flex items-center hover:text-gray-700 focus:outline-none"
+                  className="flex items-center hover:text-[var(--theme-text-primary)] focus:outline-none"
                   aria-label={`Сортировать по ${COLUMN_LABELS.firstName}`}
                 >
                   {COLUMN_LABELS.firstName}
                   {renderSortIcon('firstName')}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--theme-text-secondary)] uppercase tracking-wider">
                 <button
                   type="button"
                   onClick={() => handleSort('lastName')}
-                  className="flex items-center hover:text-gray-700 focus:outline-none"
+                  className="flex items-center hover:text-[var(--theme-text-primary)] focus:outline-none"
                   aria-label={`Сортировать по ${COLUMN_LABELS.lastName}`}
                 >
                   {COLUMN_LABELS.lastName}
                   {renderSortIcon('lastName')}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--theme-text-secondary)] uppercase tracking-wider">
                 Роли
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--theme-text-secondary)] uppercase tracking-wider">
                 <button
                   type="button"
                   onClick={() => handleSort('createdAt')}
-                  className="flex items-center hover:text-gray-700 focus:outline-none"
+                  className="flex items-center hover:text-[var(--theme-text-primary)] focus:outline-none"
                   aria-label={`Сортировать по ${COLUMN_LABELS.createdAt}`}
                 >
                   {COLUMN_LABELS.createdAt}
@@ -255,18 +256,18 @@ export function UserList(): ReactElement {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-[var(--theme-bg-primary)] divide-y divide-[var(--theme-border-color)]">
             {items.map(user => {
               const router = useRouter();
               return (
                 <tr
                   key={user.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="cursor-pointer hover:bg-[var(--theme-hover-bg)] transition-colors"
                   onClick={() => router.push(`/dashboard/users/${user.id}`)}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.firstName ?? '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.lastName ?? '—'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--theme-text-primary)]">{user.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--theme-text-primary)]">{user.firstName ?? '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--theme-text-primary)]">{user.lastName ?? '—'}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-wrap gap-1">
                     {user.roles.length > 0 ? (
@@ -276,11 +277,11 @@ export function UserList(): ReactElement {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-gray-400 text-sm">—</span>
+                      <span className="text-[var(--theme-text-secondary)] text-sm">—</span>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--theme-text-secondary)]">
                   {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                 </td>
               </tr>
@@ -300,8 +301,8 @@ export function UserList(): ReactElement {
 
       {/* Пагинация */}
       {items.length > 0 && (
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-gray-200">
-          <div className="text-sm text-gray-700">
+        <div className="flex items-center justify-between px-6 py-3 bg-[var(--theme-bg-primary)] border-t border-[var(--theme-border-color)]">
+          <div className="text-sm text-[var(--theme-text-primary)]">
             Страница {page} из {Math.max(1, Math.ceil(total / LIMIT))} (всего: {total})
           </div>
           <div className="flex gap-2">
@@ -309,7 +310,7 @@ export function UserList(): ReactElement {
               type="button"
               onClick={handlePrevPage}
               disabled={page <= 1}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-[var(--theme-text-primary)] bg-[var(--theme-bg-primary)] border border-[var(--theme-border-color)] rounded-md hover:bg-[var(--theme-hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Предыдущая страница"
             >
               Назад
@@ -318,7 +319,7 @@ export function UserList(): ReactElement {
               type="button"
               onClick={handleNextPage}
               disabled={page >= Math.ceil(total / LIMIT)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-[var(--theme-text-primary)] bg-[var(--theme-bg-primary)] border border-[var(--theme-border-color)] rounded-md hover:bg-[var(--theme-hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Следующая страница"
             >
               Вперёд

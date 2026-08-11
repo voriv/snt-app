@@ -1,0 +1,68 @@
+# ============================================
+# Docker Compose для базы данных (VPS-DB)
+# Двухсерверная архитектура: VPS-DB содержит
+# только PostgreSQL и сервис бэкапов.
+# ============================================
+services:
+  # База данных PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: snt-prod-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-snt_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-strong-password}
+      POSTGRES_DB: ${POSTGRES_DB:-snt_db}
+    ports:
+      # Слушает ТОЛЬКО на приватном IP VPS-DB (внутренняя сеть Ruvds).
+      # Публичный доступ к 5432 ЗАКРЫТ. Пример:
+      # "<PRIVATE_IP_VPS_DB>:5432:5432"
+      - "${DB_BIND_ADDRESS:-127.0.0.1}:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-snt_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - db-network
+
+  # Сервис бэкапов (запускается по cron через `docker compose run --rm backup`)
+  backup:
+    image: postgres:15-alpine
+    container_name: snt-prod-backup
+    restart: "no"
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup-to-object-storage.sh:/backup.sh:ro
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-snt_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-me-strong-password}
+      PGDATABASE: ${POSTGRES_DB:-snt_db}
+      # Object Storage (S3-совместимое). Заполняется в .env на VPS-DB.
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-snt-backups}
+      # Путь внутри bucket (префикс), например snt-prod
+      S3_PREFIX: ${S3_PREFIX:-snt-prod}
+      # Хранить локально перед загрузкой (после загрузки удаляется)
+      KEEP_LOCAL_DAYS: "${KEEP_LOCAL_DAYS:-0}"
+    entrypoint: ['/bin/sh', '-c']
+    command: ['sh', '/backup.sh']
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - db-network
+
+volumes:
+  postgres_data:
+
+networks:
+  db-network:
+    driver: bridge
+    # Изоляция: compose сеть внутренняя. Доступ к db извне — только через ports.
+    internal: false

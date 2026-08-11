@@ -50,16 +50,50 @@ export class MessageNotFoundError extends NotFoundError {
 
 /**
  * @domain comms
- * @description Ошибка: диалог уже существует
+ * @description Ошибка: личный диалог уже существует
  *
  * @spec
  * - Код ошибки: CONVERSATION_ALREADY_EXISTS
  * - HTTP статус: 409
  * - Сообщение: личный диалог между этими пользователями уже существует
+ * - B-029: conversationId — опциональный параметр (ID уже существующего диалога)
+ *   для редиректа клиента; обратная совместимость: `new ConversationAlreadyExistsError()`
+ *   без аргумента работает (используется в старых вызовах).
+ *
+ * @traces US-21-38, US-21-39 (B-029)
  */
 export class ConversationAlreadyExistsError extends ConflictError {
-  constructor() {
-    super('Личный диалог между этими пользователями уже существует');
+  public readonly conversationId?: string;
+
+  constructor(conversationId?: string) {
+    super('Диалог с этим пользователем уже существует');
+    this.conversationId = conversationId;
+  }
+}
+
+/**
+ * @domain comms
+ * @description Ошибка: обнаружена дублирующаяся попытка создания DIRECT-диалога (race condition)
+ *
+ * @spec
+ * - Возникает на уровне repository при P2002 (unique constraint violation на pair_key)
+ * - Содержит ID уже существующего диалога (existingConversationId)
+ * - НЕ является публичной ошибкой — преобразуется service-слоём в ConversationAlreadyExistsError
+ * - Наследует BaseError (не ConflictError): repository не знает о HTTP-статусах
+ *
+ * @traces B-029 T2-1 (race condition AC-03)
+ * @see docs/plans/REQ-COMMS-004-B029-plan.md → T2-1, T3-1
+ */
+export class DuplicateConversationError extends BaseError {
+  public readonly existingConversationId: string;
+
+  constructor(existingConversationId: string) {
+    super(
+      'Диалог между этими пользователями уже существует (race condition)',
+      409,
+      'DUPLICATE_CONVERSATION'
+    );
+    this.existingConversationId = existingConversationId;
   }
 }
 
@@ -210,6 +244,30 @@ export class CannotAddParticipantError extends ForbiddenError {
 export class ChatParticipantNotFoundError extends NotFoundError {
   constructor(userId: string) {
     super(`Пользователь с ID ${userId} не найден в чате`, '404', 'CHAT_PARTICIPANT_NOT_FOUND');
+  }
+}
+
+/**
+ * @error ParticipantNotFoundError
+ * @domain comms
+ * @description Участник диалога не найден — пользователь не является участником
+ *
+ * @spec
+ * - Код ошибки: PARTICIPANT_NOT_FOUND
+ * - HTTP статус: 404
+ * - Сообщение: "Участник не найден в диалоге {conversationId} для пользователя {userId}"
+ * - Сценарий: markAsRead вызывается пользователем, не являющимся участником диалога/чата
+ *
+ * @traces US-39-01 AC-4
+ * @task B-026-T1-2
+ */
+export class ParticipantNotFoundError extends NotFoundError {
+  constructor(conversationId: string, userId: string) {
+    super(
+      `Участник не найден в диалоге ${conversationId} для пользователя ${userId}`,
+      `${conversationId}:${userId}`,
+      'PARTICIPANT_NOT_FOUND'
+    );
   }
 }
 

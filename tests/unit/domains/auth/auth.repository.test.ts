@@ -258,28 +258,18 @@ describe('AuthRepository', () => {
       });
     });
 
-    it('should create user without role if GUEST role not found', async () => {
+    it('should throw GuestRoleMissingError if GUEST role not found', async () => {
       const createInput = createMockCreateInput();
-      const createdUser = {
-        id: 'usr_new',
-        email: createInput.email,
-        name: createInput.name,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
 
       // GUEST роль не найдена
-      const txUserCreate = vi.fn().mockResolvedValueOnce(createdUser);
+      const txUserCreate = vi.fn();
       const txRoleFindUnique = vi.fn().mockResolvedValueOnce(null);
-      const txUserRoleCreate = vi.fn().mockResolvedValueOnce(null);
 
       prismaMocks.mockTransaction.mockImplementation(
-        buildTransaction(txUserCreate, prismaMocks.mockUserFindUnique, txRoleFindUnique, txUserRoleCreate)
+        buildTransaction(txUserCreate, prismaMocks.mockUserFindUnique, txRoleFindUnique, vi.fn())
       );
 
-      const result = await repository.create(createInput);
-
-      expect(result.email).toBe(createInput.email);
+      await expect(repository.create(createInput)).rejects.toThrow('Системная роль GUEST не найдена');
     });
 
     it('should throw UserDuplicateError on P2002 for email', async () => {

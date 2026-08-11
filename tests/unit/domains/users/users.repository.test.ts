@@ -247,6 +247,89 @@ describe('UsersRepositoryPrisma', () => {
         total: 0,
       });
     });
+  
+    // ==========================================================================
+    // B030-T5-1: email-ветка фильтра searchUsers
+    // ==========================================================================
+  
+    /**
+     * @spec B030-T5-1 — юнит-тест email-ветки фильтра в searchUsers
+     * @traces B-030 симптом 1
+     */
+    describe('searchUsers email filtering', () => {
+      it('должен найти пользователя по полному email', async () => {
+        // Arrange: mock Prisma findMany → возвращает пользователя с указанным email
+        const mockPrismaUser = createMockPrismaUser({
+          id: 'usr_email',
+          email: 'test@example.com',
+          profile: { first_name: '', last_name: '' },
+        });
+        prismaMocks.mockFindMany.mockResolvedValueOnce([mockPrismaUser]);
+  
+        // Act: поиск по полному email
+        const result = await repository.searchUsers('test@example.com', 'current_user', 20);
+  
+        // Assert
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+          id: 'usr_email',
+          email: 'test@example.com',
+        });
+        // Подтвердить, что Prisma получила email-фильтр
+        expect(prismaMocks.mockFindMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              OR: expect.arrayContaining([
+                expect.objectContaining({ email: expect.any(Object) }),
+              ]),
+            }),
+          })
+        );
+      });
+  
+      it('должен найти пользователя по частичному email (test@)', async () => {
+        const mockPrismaUser = createMockPrismaUser({
+          id: 'usr_partial',
+          email: 'test@search.com',
+          profile: { first_name: '', last_name: '' },
+        });
+        prismaMocks.mockFindMany.mockResolvedValueOnce([mockPrismaUser]);
+  
+        const result = await repository.searchUsers('test@', 'current_user', 20);
+  
+        expect(result).toHaveLength(1);
+        expect(result[0].email).toBe('test@search.com');
+      });
+  
+      it('должен искать email case-insensitive', async () => {
+        const mockPrismaUser = createMockPrismaUser({
+          id: 'usr_case',
+          email: 'Test@Example.COM',
+          profile: { first_name: '', last_name: '' },
+        });
+        prismaMocks.mockFindMany.mockResolvedValueOnce([mockPrismaUser]);
+  
+        const result = await repository.searchUsers('test@example.com', 'current_user', 20);
+  
+        expect(result).toHaveLength(1);
+        expect(result[0].email).toBe('Test@Example.COM');
+      });
+  
+      it('не должен возвращать текущего пользователя (excludeUserId)', async () => {
+        prismaMocks.mockFindMany.mockResolvedValueOnce([]);
+  
+        await repository.searchUsers('query', 'exclude_me', 20);
+  
+        // Подтвердить, что where содержит id: { not: 'exclude_me' }
+        expect(prismaMocks.mockFindMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              id: { not: 'exclude_me' },
+            }),
+          })
+        );
+      });
+    });
   });
 
   // ==========================================================================

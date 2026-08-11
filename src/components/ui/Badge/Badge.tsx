@@ -9,11 +9,11 @@ export interface BadgeProps {
 }
 
 const variants = {
-  default: 'bg-gray-100 text-gray-800',
-  success: 'bg-green-100 text-green-800',
-  warning: 'bg-yellow-100 text-yellow-800',
-  danger: 'bg-red-100 text-red-800',
-  info: 'bg-blue-100 text-blue-800',
+  default: 'bg-[var(--theme-bg-secondary)] text-[var(--theme-text-secondary)]',
+  success: 'bg-[var(--theme-success)]/10 text-[var(--theme-success)]',
+  warning: 'bg-[var(--theme-warning)]/10 text-[var(--theme-warning)]',
+  danger: 'bg-[var(--theme-danger)]/10 text-[var(--theme-danger)]',
+  info: 'bg-[var(--theme-info)]/10 text-[var(--theme-info)]',
 };
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {

@@ -7,6 +7,7 @@ import { getContainer } from '@/di/container';
 import { auth } from '@/lib/auth';
 import type { BaseError } from '@/shared/errors';
 import { AnnouncementListQuerySchema } from '@/domains/announcement/announcement.validators';
+import { withRoleGuard } from '@/app/api/v1/_shared/with-role-guard';
 
 /**
  * @route GET /api/v1/announcements
@@ -101,7 +102,7 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export { handlePost as POST };
+export const POST = withRoleGuard(handlePost, { method: 'POST', path: '/announcements' });
 
 function errorResponse(error: unknown): NextResponse {
   if (error instanceof Error && 'code' in error) {

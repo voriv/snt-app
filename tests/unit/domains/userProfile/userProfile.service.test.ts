@@ -307,6 +307,7 @@ describe('UserProfileService', () => {
   describe('uploadAvatar', () => {
     it('should upload avatar and return result', async () => {
       const mockFile: MockFile = createMockFile(1024 * 1024, 'image/jpeg');
+      mockRepository.findByUserId = vi.fn().mockResolvedValue(createMockUserProfile());
 
       const result = await service.uploadAvatar('user-123', mockFile);
 

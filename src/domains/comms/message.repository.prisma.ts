@@ -245,9 +245,16 @@ export class MessageRepositoryPrisma implements IMessageRepository {
   private mapToMessageWithSender(message: any): MessageWithSender {
     const { sender } = message;
     const profile = sender?.profile;
-    const firstName = profile?.first_name || sender.name || '';
+
+    // BR-39: Приоритет имени отправителя:
+    // 1) UserProfile.first_name + UserProfile.last_name (Имя Фамилия)
+    // 2) User.name (если профиль пуст)
+    // 3) User.email (если нет имени)
+    // 4) '' → UI покажет "Удалённый пользователь" (если sender=null)
+    const firstName = profile?.first_name || '';
     const lastName = profile?.last_name || '';
-    const senderName = `${firstName} ${lastName}`.trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    const senderName = fullName || (sender?.name || '');
     const senderEmail = sender?.email || '';
 
     return {

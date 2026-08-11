@@ -52,4 +52,23 @@ export interface IAuthRepository {
    * - Роль GUEST назначается в репозитории через user_roles (RBAC, US-8)
    */
   create(data: CreateUserInput): Promise<UserData>;
+
+ /**
+  * Обновить пароль пользователя (сохранить новый хеш)
+  *
+  * @param userId - ID пользователя
+  * @param passwordHash - Новый хеш пароля (уже захеширован через bcrypt)
+  * @returns void
+  *
+  * @spec
+  * - passwordHash уже должен быть захеширован через bcrypt
+  * - Не возвращает данные пользователя — только подтверждает обновление
+  * - Используется для активной смены пароля пользователем (US-12)
+  * - Бизнес-проверки (совпадение текущего пароля, отличие нового от старого)
+  *   выполняются на уровне сервиса, а не в репозитории
+  *
+  * @see docs/requirements/REQ-AUTH-001.md — FR-12
+  * @see docs/user-stories/US-12-активная-смена-пароля-пользователем.md
+  */
+ updatePassword(userId: string, passwordHash: string): Promise<void>;
 }

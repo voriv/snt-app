@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id                        String                  @id @default(cuid())
-  email                     String                  @unique @map("email")
-  name                      String?                 @map("name")
-  password                  String                  @map("password")
-  createdAt                 DateTime                @default(now()) @map("created_at")
-  updatedAt                 DateTime                @updatedAt @map("updated_at")
-  plotUserHistories         PlotUserRoleHistory[]   @relation("HistoryChangedBy")
-  plotUserRoles             PlotUserRole[]
-  profile                   UserProfile?
-  roles                     UserRole[]
-  announcements             Announcement[]
-  sentMessages              Message[]
-  conversationParticipants  ConversationParticipant[]
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique @map("email")
+  name                     String?                   @map("name")
+  password                 String                    @map("password")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  plotUserHistories        PlotUserRoleHistory[]     @relation("HistoryChangedBy")
+  plotUserRoles            PlotUserRole[]
+  profile                  UserProfile?
+  roles                    UserRole[]
+  announcements            Announcement[]
+  sentMessages             Message[]
+  conversationParticipants ConversationParticipant[]
+  documents                Document[]                @relation("DocumentUploadedBy")
 
   @@map("user")
 }
@@ -38,7 +39,7 @@ model UserProfile {
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  
+
   @@map("user_profiles")
 }
 
@@ -212,15 +213,25 @@ enum ParticipantRole {
 }
 
 /// Диалог (разговор) между пользователями
+///
+/// ⚠️  BR-06/NFR-03 (B-029): поле pair_key вычисляется на уровне Prisma (sorted user IDs)
+/// и хранится на диалоге (одна строка на диалог). Partial unique index на pair_key
+/// (WHERE pair_key IS NOT NULL) предотвращает дублирование DIRECT-диалогов.
+/// Для GROUP/ANNOUNCEMENT диалогов pair_key = NULL — индекс не применяется.
+/// См. миграцию add_unique_direct_conversation_constraint.
 model Conversation {
-  id           String             @id @default(cuid())
-  type         ConversationType   @default(DIRECT) @map("type")
-  title        String?            @map("title")
-  description  String?            @map("description") @db.Text
-  plotId       String?            @map("plot_id")
-  createdBy    String             @map("created_by")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  id          String           @id @default(cuid())
+  type        ConversationType @default(DIRECT) @map("type")
+  title       String?          @map("title")
+  description String?          @map("description") @db.Text
+  plotId      String?          @map("plot_id")
+  createdBy   String           @map("created_by")
+  // B-029: детерминированный ключ пары для DIRECT-диалогов (sorted user IDs).
+  // Одна строка на диалог → unique-индекс корректен и не конфликтует с двумя
+  // строками участников. Для GROUP/ANNOUNCEMENT = NULL.
+  pairKey     String?          @map("pair_key")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   participants ConversationParticipant[]
   messages     Message[]
@@ -230,15 +241,15 @@ model Conversation {
 
 /// Связь пользователь-диалог
 model ConversationParticipant {
-  id             String            @id @default(cuid())
-  conversationId String            @map("conversation_id")
-  userId         String            @map("user_id")
-  role           ParticipantRole   @default(MEMBER) @map("role")
-  joinedAt       DateTime          @default(now()) @map("joined_at")
-  lastReadAt     DateTime?         @map("last_read_at")
+  id             String          @id @default(cuid())
+  conversationId String          @map("conversation_id")
+  userId         String          @map("user_id")
+  role           ParticipantRole @default(MEMBER) @map("role")
+  joinedAt       DateTime        @default(now()) @map("joined_at")
+  lastReadAt     DateTime?       @map("last_read_at")
 
-  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([userId])
@@ -247,26 +258,26 @@ model ConversationParticipant {
 
 /// Сообщение в диалоге
 model Message {
-  id             String         @id @default(cuid())
-  conversationId String         @map("conversation_id")
-  senderId       String         @map("sender_id")
-  content        String         @map("content")
-  replyToId      String?        @map("reply_to_id")
-  isDeleted      Boolean        @default(false) @map("is_deleted")
-  deletedBy      String?        @map("deleted_by")
-  deletedAt      DateTime?      @map("deleted_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  id             String    @id @default(cuid())
+  conversationId String    @map("conversation_id")
+  senderId       String    @map("sender_id")
+  content        String    @map("content")
+  replyToId      String?   @map("reply_to_id")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  deletedBy      String?   @map("deleted_by")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  sender         User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@map("messages")
-  }
-  
-  // ============================================
+}
+
+// ============================================
 // ANNOUNCEMENT DOMAIN (US-21-27)
 // ============================================
 
@@ -279,21 +290,94 @@ enum AnnouncementStatus {
 
 /// Объявление в СНТ
 model Announcement {
-  id           String             @id @default(cuid())
-  title        String             @map("title") @db.VarChar(200)
-  content      String             @map("content") @db.Text
-  authorId     String             @map("author_id")
-  publishedAt  DateTime?          @map("published_at")
-  archivedAt   DateTime?          @map("archived_at")
-  status       AnnouncementStatus @default(DRAFT) @map("status")
-  isImportant  Boolean            @default(false) @map("is_important")
-  viewCount    Int                @default(0) @map("view_count")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  id          String             @id @default(cuid())
+  title       String             @map("title") @db.VarChar(200)
+  content     String             @map("content") @db.Text
+  authorId    String             @map("author_id")
+  publishedAt DateTime?          @map("published_at")
+  archivedAt  DateTime?          @map("archived_at")
+  status      AnnouncementStatus @default(DRAFT) @map("status")
+  isImportant Boolean            @default(false) @map("is_important")
+  viewCount   Int                @default(0) @map("view_count")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
 
-  author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([status, publishedAt])
   @@index([authorId])
   @@map("announcements")
+}
+
+// ============================================
+// DOCUMENT DOMAIN (US-22-01...US-22-07)
+// ============================================
+
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model DocumentCategory {
+  id          String             @id @default(cuid())
+  name        String             @map("name") @db.VarChar(100)
+  description String?            @map("description") @db.VarChar(500)
+  parent_id   String?            @map("parent_id")
+  created_at  DateTime           @default(now()) @map("created_at")
+  updated_at  DateTime           @updatedAt @map("updated_at")
+  parent      DocumentCategory?  @relation("CategoryParent", fields: [parent_id], references: [id], onDelete: SetNull)
+  children    DocumentCategory[] @relation("CategoryParent")
+  documents   Document[]
+
+  @@unique([name, parent_id])
+  @@index([parent_id])
+  @@map("document_categories")
+}
+
+model Document {
+  id             String            @id @default(cuid())
+  title          String            @map("title") @db.VarChar(255)
+  description    String?           @map("description") @db.Text
+  original_name  String            @map("original_name") @db.VarChar(255)
+  storage_path   String?           @map("storage_path") @db.VarChar(500)
+  file_size      Int               @map("file_size")
+  mime_type      String            @map("mime_type") @db.VarChar(100)
+  category_id    String?           @map("category_id")
+  document_type  String            @map("document_type") @db.VarChar(50)
+  visible_roles  Json              @map("visible_roles")
+  status         DocumentStatus    @default(DRAFT) @map("status")
+  uploaded_by_id String            @map("uploaded_by_id")
+  created_at     DateTime          @default(now()) @map("created_at")
+  updated_at     DateTime          @updatedAt @map("updated_at")
+  category       DocumentCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  uploadedBy     User              @relation("DocumentUploadedBy", fields: [uploaded_by_id], references: [id], onDelete: Cascade)
+  tags           DocumentTagLink[]
+
+  @@index([category_id])
+  @@index([document_type])
+  @@index([status])
+  @@index([status, created_at])
+  @@index([uploaded_by_id])
+  @@map("documents")
+}
+
+model DocumentTag {
+  id            String            @id @default(cuid())
+  name          String            @unique @map("name") @db.VarChar(50)
+  created_at    DateTime          @default(now()) @map("created_at")
+  documentLinks DocumentTagLink[]
+
+  @@map("document_tags")
+}
+
+model DocumentTagLink {
+  document_id String      @map("document_id")
+  tag_id      String      @map("tag_id")
+  document    Document    @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  tag         DocumentTag @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, tag_id])
+  @@index([tag_id])
+  @@map("document_tag_links")
 }

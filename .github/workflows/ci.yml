@@ -1,0 +1,306 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# NFR-03 / EC-06: при быстром следовании нескольких запусков в одну ветку
+# предыдущий запуск отменяется, выполняется только последний.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  POSTGRES_VERSION: '15'
+  # EC-03: значения из GitHub Secrets с пустым fallback — если секреты не
+  # настроены, login/push будут пропущены, а build-docker не упадёт.
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  # ============================================
+  # Job 1: Lint и Type Check
+  # ============================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+  # ============================================
+  # Job 2: Unit тесты
+  # ============================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  # ============================================
+  # Job 3: Integration тесты
+  # ============================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: snt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup environment
+        run: |
+          cp .env.example .env.test
+          sed -i 's/localhost/localhost/g' .env.test
+          sed -i 's/5434/5432/g' .env.test
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Push database schema
+        run: npm run db:push
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+
+  # ============================================
+  # Job 4: Component тесты
+  # ============================================
+  component-tests:
+    name: Component Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run component tests
+        run: npm run test:components
+
+  # ============================================
+  # Job 5: E2E тесты
+  # ============================================
+  # FR-20 / AC-02 / AC-06 / BR-03: E2E выполняется ТОЛЬКО при пуше в main.
+  # На PR в main и на пуше в develop джоба будет skipped.
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: snt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Push database schema
+        run: npm run db:push
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+
+      - name: Build application
+        run: npm run build
+
+      # EC-08: в CI (CI=true) Playwright НЕ стартует встроенный webServer
+      # (reuseExistingServer: !process.env.CI в playwright.config.ts),
+      # поэтому приложение запускается этим отдельным шагом `npm start`.
+      - name: Start application
+        run: npm start &
+        env:
+          # EC-09: в playwright.config.ts webServer.env.DATABASE_URL использует
+          # порт 5433, но в CI сервис-база поднята на 5432. Передаём
+          # DATABASE_URL из шага, переопределяя значение из конфига.
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+          NEXTAUTH_SECRET: test-secret
+          NEXTAUTH_URL: http://localhost:3000
+          ENABLE_TEST_ROUTES: 'true'
+
+      # EC-04: вместо `sleep 10` — health check с таймаутом до 30 секунд.
+      - name: Wait for app to start
+        run: |
+          for i in $(seq 1 30); do
+            if curl -f http://localhost:3000 >/dev/null 2>&1; then
+              echo "App is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App failed to start within 30 seconds"
+          exit 1
+
+      # FR-18: E2E с ENABLE_TEST_ROUTES=true + DATABASE_URL (порт 5432 в CI).
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+          NEXTAUTH_SECRET: test-secret
+          NEXTAUTH_URL: http://localhost:3000
+          ENABLE_TEST_ROUTES: 'true'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/
+
+  # ============================================
+  # Job 6: Сборка Docker образа
+  # ============================================
+  # FR-24 / AC-06: только при пуше в main. needs включает e2e-tests:
+  # REQ §7 требует, чтобы сборка Docker шла ПОСЛЕ E2E. На non-main джоба
+  # e2e-tests skipped, но GitHub трактует skip как успех, поэтому build-docker
+  # с собственным `if: push && main` тоже будет пропущен на PR/develop.
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, integration-tests, component-tests, e2e-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # EC-03: если секреты Docker не настроены, вход и пуш пропускаются.
+      - name: Login to Docker Hub
+        if: env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: snt-app/snt
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # B-034-T7: NEXT_PUBLIC_* встраиваются в bundle на этапе build.
+      # Значения передаём из secrets (с пустым fallback), чтобы не хардкодить.
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_APP_NAME=${{ secrets.NEXT_PUBLIC_APP_NAME }}
+            NEXT_PUBLIC_APP_DESCRIPTION=${{ secrets.NEXT_PUBLIC_APP_DESCRIPTION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================
+  # Примечание: деплой на сервер НЕ входит в B-013 (EC-01a).
+  # Он покрывается отдельным workflow .github/workflows/deploy-ssh.yml.
+  # Соответственно, job deploy-staging здесь удалена.
+  # ============================================

@@ -187,39 +187,6 @@ export class UserProfileRepository implements IUserProfileRepository {
    */
   async findOrCreateWithUser(userId: string): Promise<UserProfileFull> {
     try {
-      // Пробуем найти
-      const existing = await this.prisma.userProfile.findUnique({
-        where: { user_id: userId },
-        include: {
-          user: {
-            include: {
-              roles: { include: { role: { select: { name: true } } } },
-            },
-          },
-        },
-      });
-
-      if (existing) {
-        return {
-          id: existing.id,
-          userId: existing.user_id,
-          email: existing.user.email,
-          name: existing.user.name,
-          roles: existing.user.roles.map(ur => ur.role.name),
-          firstName: existing.first_name,
-          middleName: existing.middle_name,
-          lastName: existing.last_name,
-          phone: existing.phone,
-          avatar: existing.avatar,
-          bio: existing.bio,
-          theme: existing.theme as Theme,
-          userCreatedAt: existing.user.createdAt,
-          userUpdatedAt: existing.user.updatedAt,
-          profileCreatedAt: existing.created_at,
-          profileUpdatedAt: existing.updated_at,
-        };
-      }
-
       // Проверка существования пользователя
       const userExists = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -229,47 +196,42 @@ export class UserProfileRepository implements IUserProfileRepository {
         throw new UserProfileNotFoundError(`User with id ${userId} not found`);
       }
 
-      // Создаём новый профиль БЕЗ include (чтобы избежать конфликтов FK)
-      const created = await this.prisma.userProfile.create({
-        data: {
+      // Используем upsert для атомарного создания профиля (предотвращает race condition)
+      const profile = await this.prisma.userProfile.upsert({
+        where: { user_id: userId },
+        create: {
           user_id: userId,
           first_name: null,
           last_name: null,
           theme: 'light', // дефолтная тема
         },
-      });
-
-      // Отдельно загружаем пользователя с ролями
-      const userWithRoles = await this.prisma.user.findUnique({
-        where: { id: userId },
+        update: {},
         include: {
-          roles: { include: { role: { select: { name: true } } } },
+          user: {
+            include: {
+              roles: { include: { role: { select: { name: true } } } },
+            },
+          },
         },
       });
 
-      if (!userWithRoles) {
-        // Если пользователь не найден после создания профиля — удаляем профиль и выбрасываем ошибку
-        await this.prisma.userProfile.delete({ where: { id: created.id } });
-        throw new UserProfileNotFoundError(userId);
-      }
-
       return {
-        id: created.id,
-        userId: created.user_id,
-        email: userWithRoles.email,
-        name: userWithRoles.name,
-        roles: userWithRoles.roles.map(ur => ur.role.name),
-        firstName: created.first_name,
-        middleName: created.middle_name,
-        lastName: created.last_name,
-        phone: created.phone,
-        avatar: created.avatar,
-        bio: created.bio,
-        theme: created.theme as Theme,
-        userCreatedAt: userWithRoles.createdAt,
-        userUpdatedAt: userWithRoles.updatedAt,
-        profileCreatedAt: created.created_at,
-        profileUpdatedAt: created.updated_at,
+        id: profile.id,
+        userId: profile.user_id,
+        email: profile.user.email,
+        name: profile.user.name,
+        roles: profile.user.roles.map(ur => ur.role.name),
+        firstName: profile.first_name,
+        middleName: profile.middle_name,
+        lastName: profile.last_name,
+        phone: profile.phone,
+        avatar: profile.avatar,
+        bio: profile.bio,
+        theme: profile.theme as Theme,
+        userCreatedAt: profile.user.createdAt,
+        userUpdatedAt: profile.user.updatedAt,
+        profileCreatedAt: profile.created_at,
+        profileUpdatedAt: profile.updated_at,
       };
     } catch (error) {
       // Если уже выбросили доменную ошибку — пробрасываем её

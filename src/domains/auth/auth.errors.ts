@@ -78,3 +78,41 @@ export class GuestRoleMissingError extends BusinessRuleError {
     super('Системная роль GUEST не найдена. Регистрация невозможна. Обратитесь к администратору.');
   }
 }
+
+/**
+ * @type InvalidCurrentPasswordError
+ * @domain auth
+ * @description Ошибка неверного текущего пароля при смене пароля
+ *
+ * @spec
+ * - Наследуется от BusinessRuleError
+ * - Используется когда введённый текущий пароль не совпадает с хешем в БД
+ * - Сообщение на русском языке
+ *
+ * @see docs/requirements/REQ-AUTH-001.md — BR-09, FR-10
+ * @see docs/user-stories/US-12-активная-смена-пароля-пользователем.md
+ */
+export class InvalidCurrentPasswordError extends BusinessRuleError {
+  constructor() {
+    super('Неверный текущий пароль');
+  }
+}
+
+/**
+ * @type NewPasswordMatchesCurrentError
+ * @domain auth
+ * @description Ошибка: новый пароль совпадает с текущим
+ *
+ * @spec
+ * - Наследуется от BusinessRuleError
+ * - Используется когда новый пароль совпадает с текущим (запрещено бизнес-правилом)
+ * - Сообщение на русском языке
+ *
+ * @see docs/requirements/REQ-AUTH-001.md — BR-10, FR-11
+ * @see docs/user-stories/US-12-активная-смена-пароля-пользователем.md
+ */
+export class NewPasswordMatchesCurrentError extends BusinessRuleError {
+  constructor() {
+    super('Новый пароль не может совпадать с текущим');
+  }
+}

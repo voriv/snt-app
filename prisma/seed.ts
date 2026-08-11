@@ -160,7 +160,75 @@ async function createFirstSuperAdmin() {
       console.log(`  → SUPER_ADMIN role assigned to ${user.email}`);
     }
   }
-  
+
+  /**
+   * Создаёт тестового пользователя с ролью MEMBER для E2E тестов
+   *
+   * @description Создаёт пользователя member@snt.local с паролем Member123!
+   * и назначает ему роль MEMBER. Если пользователь уже существует — пропускает.
+   * Используется в E2E тестах для loginAsMember().
+   *
+   * @returns Promise<void>
+   *
+   * @spec
+   * - Проверяет наличие пользователя по email
+   * - Создаёт нового пользователя с хешированным паролем
+   * - Назначает роль MEMBER через user_roles таблицу
+   * - Идемпотентно: upsert по уникальному ключу
+   */
+  async function createTestMember() {
+    console.log('🌱 Creating test MEMBER user...');
+
+    const email = 'member@snt.local';
+    const password = 'Member123!';
+    const name = 'Член СНТ';
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      console.log(`  → User ${email} already exists, skipping creation`);
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: passwordHash,
+      },
+    });
+
+    console.log(`  → User created: ${user.email} (id: ${user.id})`);
+
+    // Ищем роль MEMBER
+    const memberRole = await prisma.role.findUnique({
+      where: { name: 'MEMBER' },
+    });
+
+    if (!memberRole) {
+      console.log('  → MEMBER role not found, skipping role assignment');
+      return;
+    }
+
+    // Назначаем роль MEMBER
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId: { userId: user.id, roleId: memberRole.id },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        roleId: memberRole.id,
+      },
+    });
+
+    console.log(`  → MEMBER role assigned to ${user.email}`);
+  }
+
   const SEED_ROLES = [
   { name: 'SUPER_ADMIN', description: 'Супер-администратор. Полный доступ ко всем страницам.', isSystem: true },
   { name: 'ADMIN', description: 'Администратор. Настраиваемая роль.', isSystem: true },
@@ -242,6 +310,10 @@ const SEED_API_ENDPOINTS = [
   // Comms - Chats (group)
   { method: 'GET', path: '/chats', accessType: 'role', description: 'Список групповых чатов' },
   { method: 'POST', path: '/chats', accessType: 'role', description: 'Создание группового чата' },
+  // Announcements
+  { method: 'GET', path: '/announcements', accessType: 'role', description: 'Получение списка объявлений' },
+  { method: 'GET', path: '/announcements/:id', accessType: 'role', description: 'Получение деталей объявления' },
+  { method: 'POST', path: '/announcements', accessType: 'role', description: 'Создание нового объявления' },
 ];
 
 /**
@@ -399,6 +471,9 @@ async function main() {
   
   // Создаём дополнительных пользователей-суперадминистраторов
   await createAdditionalSuperAdmins();
+  
+  // Создаём тестового пользователя MEMBER для E2E тестов
+  await createTestMember();
   
   console.log('🎉 Seeding completed!');
 }

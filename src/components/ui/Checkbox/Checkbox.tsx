@@ -16,7 +16,7 @@ export function Checkbox({ label, error, className, id, ...props }: CheckboxProp
         id={checkboxId}
         type="checkbox"
         className={cn(
-          'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500',
+          'h-4 w-4 rounded border-[var(--theme-input-border)] text-[var(--theme-accent)] focus:ring-[var(--theme-accent)]',
           className,
         )}
         {...props}
@@ -24,7 +24,7 @@ export function Checkbox({ label, error, className, id, ...props }: CheckboxProp
       {label && (
         <label
           htmlFor={checkboxId}
-          className="ml-2 block text-sm text-gray-900"
+          className="ml-2 block text-sm text-[var(--theme-text-primary)]"
         >
           {label}
         </label>

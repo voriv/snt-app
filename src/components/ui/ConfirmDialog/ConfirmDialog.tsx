@@ -103,12 +103,6 @@ export function ConfirmDialog({
     return <></>;
   }
 
-  const confirmButtonVariants = {
-    primary:
-      'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto"
@@ -118,7 +112,7 @@ export function ConfirmDialog({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        className="fixed inset-0 bg-[var(--theme-bg-overlay)] transition-opacity"
         aria-hidden="true"
         onClick={handleBackdropClick}
       />
@@ -126,13 +120,13 @@ export function ConfirmDialog({
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
         <div
-          className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6"
+          className="relative transform overflow-hidden rounded-lg bg-[var(--theme-bg-primary)] px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6"
           onClick={(e) => e.stopPropagation()}
         >
           <div>
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--theme-bg-secondary)]">
               <svg
-                className="h-6 w-6 text-gray-600"
+                className="h-6 w-6 text-[var(--theme-text-secondary)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
@@ -147,13 +141,13 @@ export function ConfirmDialog({
             </div>
             <div className="mt-3 text-center sm:mt-5">
               <h3
-                className="text-base font-semibold leading-6 text-gray-900"
+                className="text-base font-semibold leading-6 text-[var(--theme-text-primary)]"
                 id="modal-title"
               >
                 {title}
               </h3>
               <div className="mt-2">
-                <p className="text-sm text-gray-500">{message}</p>
+                <p className="text-sm text-[var(--theme-text-secondary)]">{message}</p>
               </div>
             </div>
           </div>

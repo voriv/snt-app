@@ -21,6 +21,7 @@ import {
   ConversationAccessDeniedError,
   MessageNotFoundError,
   CannotDeleteOthersMessageError,
+  ParticipantNotFoundError,
 } from '@/domains/comms/comms.errors';
 import {
   createUniqueName,
@@ -89,9 +90,13 @@ describe('CommsService Messages (Integration)', () => {
 
   afterEach(async () => {
     await cleanupComms();
-    // Удаляем тестовых пользователей
+    // Удаляем тестовых пользователей, но сохраняем глобальных
     await prisma.userProfile.deleteMany();
-    await prisma.user.deleteMany();
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: { contains: 'test-search-user' } },
+      },
+    });
   });
 
   describe('getConversationMessages', () => {
@@ -255,6 +260,136 @@ describe('CommsService Messages (Integration)', () => {
         where: { id: message.id },
       });
       expect(dbMessage?.isDeleted).toBe(false);
+    });
+  });
+
+  // Хелпер: создаёт DIRECT-конверсацию с UUID id (markAsReadSchema требует UUID)
+  async function createUuidConversation(userA: string, userB: string): Promise<string> {
+    const conv = await prisma.conversation.create({
+      data: {
+        id: 'aaaaaaaa-0000-4000-8000-000000000001',
+        type: 'DIRECT',
+        createdBy: userA,
+        participants: {
+          create: [
+            { userId: userA, role: 'MEMBER' },
+            { userId: userB, role: 'MEMBER' },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    return conv.id;
+  }
+
+  describe('markConversationAsRead (B-026, US-39-01)', () => {
+    it('AC-1: markAsRead обновляет lastReadAt участника', async () => {
+      const uuidConv = await createUuidConversation(user1.id, user2.id);
+
+      await service.markConversationAsRead(uuidConv, user1.id);
+
+      const updated = await prisma.conversationParticipant.findUnique({
+        where: { conversationId_userId: { conversationId: uuidConv, userId: user1.id } },
+        select: { lastReadAt: true },
+      });
+      expect(updated?.lastReadAt).not.toBeNull();
+    });
+
+    it('AC-4: повторный вызов идемпотентен (не бросает ошибку)', async () => {
+      const uuidConv = await createUuidConversation(user1.id, user2.id);
+      await service.markConversationAsRead(uuidConv, user1.id);
+      await expect(
+        service.markConversationAsRead(uuidConv, user1.id)
+      ).resolves.toBeUndefined();
+    });
+
+    it('бросает ParticipantNotFoundError для не-участника', async () => {
+      const uuidConv = await createUuidConversation(user1.id, user2.id);
+      const outsider = await createTestUser();
+      await expect(
+        service.markConversationAsRead(uuidConv, outsider.id)
+      ).rejects.toThrow(ParticipantNotFoundError);
+    });
+
+    it('бросает ошибку валидации при невалидном (не-UUID) conversationId', async () => {
+      await expect(
+        service.markConversationAsRead('bad-id', user1.id)
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('getMessagesWithReadStatus (B-026, US-39-02)', () => {
+    it('AC-1: DIRECT — isReadByRecipient=false когда собеседник не читал', async () => {
+      const uuidConv = await createUuidConversation(user1.id, user2.id);
+      const msg = await prisma.message.create({
+        data: { conversationId: uuidConv, senderId: user1.id, content: 'Привет' },
+      });
+
+      const messages = await service.getMessagesWithReadStatus(uuidConv, user2.id);
+      const found = messages.find((m) => m.id === msg.id);
+      // user1 (отправитель) lastReadAt null → не прочитано получателем (viewer user2)
+      expect(found?.isReadByRecipient).toBe(false);
+    });
+
+    it('AC-2: DIRECT — isReadByRecipient=true когда собеседник прочитал', async () => {
+      const uuidConv = await createUuidConversation(user1.id, user2.id);
+      const msg = await prisma.message.create({
+        data: { conversationId: uuidConv, senderId: user1.id, content: 'Прочитано' },
+      });
+      // user2 (получатель) отмечает прочитанным
+      await prisma.conversationParticipant.update({
+        where: { conversationId_userId: { conversationId: uuidConv, userId: user2.id } },
+        data: { lastReadAt: new Date(Date.now() + 1000) },
+      });
+
+      const messages = await service.getMessagesWithReadStatus(uuidConv, user1.id);
+      const found = messages.find((m) => m.id === msg.id);
+      expect(found?.isReadByRecipient).toBe(true);
+    });
+
+    it('AC-3/AC-6: GROUP — корректные readByCount/totalParticipants', async () => {
+      const extra1 = await createTestUser();
+      const extra2 = await createTestUser();
+      const group = await prisma.conversation.create({
+        data: {
+          id: 'bbbbbbbb-0000-4000-8000-000000000002',
+          type: 'GROUP',
+          createdBy: user1.id,
+          participants: {
+            create: [
+              { userId: user1.id, role: 'OWNER' },
+              { userId: user2.id, role: 'MEMBER' },
+              { userId: extra1.id, role: 'MEMBER' },
+              { userId: extra2.id, role: 'MEMBER' },
+            ],
+          },
+        },
+        include: { participants: true },
+      });
+
+      const msg = await prisma.message.create({
+        data: { conversationId: group.id, senderId: user1.id, content: 'Групповое' },
+      });
+
+      // Один получатель прочитал (user2), двое нет
+      await prisma.conversationParticipant.update({
+        where: { conversationId_userId: { conversationId: group.id, userId: user2.id } },
+        data: { lastReadAt: new Date(Date.now() + 1000) },
+      });
+
+      const messages = await service.getMessagesWithReadStatus(group.id, user1.id);
+      const found = messages.find((m) => m.id === msg.id);
+      expect(found?.totalParticipants).toBe(3);
+      expect(found?.readByCount).toBe(1);
+      expect(found?.isReadByRecipient).toBe(true);
+    });
+
+    it('возвращает пустой массив для несуществующего диалога', async () => {
+      const messages = await service.getMessagesWithReadStatus(
+        '00000000-0000-4000-8000-000000000000',
+        user1.id
+      );
+      expect(messages).toEqual([]);
     });
   });
 });

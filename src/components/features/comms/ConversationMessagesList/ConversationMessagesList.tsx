@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { MessageWithSender } from '@/domains/comms/message.types';
+import type { ConversationType, MessageWithReadStatus } from '@/domains/comms/comms.types';
+import type { ReadStatus } from '@/components/features/comms/MessageItem';
 import { MessageItem } from '@/components/features/comms/MessageItem';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/shared/utils/cn';
@@ -9,29 +11,47 @@ import { cn } from '@/shared/utils/cn';
 /**
  * @component ConversationMessagesList
  * @category features/comms
- * @description Компонент для отображения списка сообщений в диалоге с поддержкой пагинации
+ * @description Компонент для отображения списка сообщений в диалоге с поддержкой пагинации и read receipts
  *
- * @prop messages - Список сообщений для отображения
+ * @prop messages - Список сообщений типа MessageWithReadStatus для отображения
  * @prop currentUserId - ID текущего пользователя для определения своих сообщений
  * @prop isLoading - Флаг загрузки данных
  * @prop hasMore - Есть ли еще сообщения для загрузки
  * @prop onLoadMore - Callback для загрузки дополнительных сообщений
  * @prop onScroll - Callback для отслеживания прокрутки
  * @prop lastMessageId - ID последнего сообщения (для автопрокрутки)
+ * @prop conversationType - Тип беседы (DIRECT | GROUP) для ReadReceiptIcon
  *
  * @spec
  * - Автоматически прокручивает к последнему сообщению при загрузке
  * - При скролле вверх выше порога (100px) загружает предыдущие сообщения
  * - Отображает EmptyState если сообщений нет
  * - Показывает индикатор загрузки при подгрузке сообщений
+ * - Прокидывает readStatus и conversationType в MessageItem для read receipts
+ *
+ * @traces US-39-02 AC-1, AC-2, AC-3, AC-6
+ * @task B-026-T5-4
+ *
+ * @see docs/user-stories/US-39-02-read-receipts.md
  */
 export interface ConversationMessagesListProps {
-  messages: MessageWithSender[];
+  /**
+   * Список сообщений. Поддерживает `MessageWithReadStatus[]` (с read receipts, US-39-02)
+   * и `MessageWithSender[]` (backward-compatible). ReadStatus извлекается, если присутствует.
+   */
+  messages: (MessageWithReadStatus | MessageWithSender)[];
   currentUserId: string;
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
   lastMessageId?: string;
+  /**
+   * Callback удаления сообщения. Прокидывается в MessageItem.
+   * @covers AC-7 (B-024-T10-1)
+   */
+  onDelete?: (messageId: string) => void;
+  /** Тип беседы для ReadReceiptIcon */
+  conversationType?: ConversationType;
 }
 
 export const ConversationMessagesList: React.FC<ConversationMessagesListProps> = ({
@@ -40,8 +60,22 @@ export const ConversationMessagesList: React.FC<ConversationMessagesListProps> =
   isLoading = false,
   hasMore = false,
   onLoadMore,
-  lastMessageId
+  lastMessageId,
+  onDelete,
+  conversationType = 'DIRECT'
 }) => {
+  const getReadStatus = (
+    message: MessageWithReadStatus | MessageWithSender,
+  ): ReadStatus | undefined => {
+    if ('isReadByRecipient' in message) {
+      return {
+        isReadByRecipient: message.isReadByRecipient,
+        readByCount: message.readByCount,
+        totalParticipants: message.totalParticipants,
+      };
+    }
+    return undefined;
+  };
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -106,8 +140,6 @@ export const ConversationMessagesList: React.FC<ConversationMessagesListProps> =
     if (!container || !onLoadMore || !hasMore) return;
 
     const scrollTop = container.scrollTop;
-    const scrollHeight = container.scrollHeight;
-    const clientHeight = container.clientHeight;
 
     // Если прокрутили выше 100px от верха, загружаем предыдущие сообщения
     if (scrollTop < 100) {
@@ -120,7 +152,9 @@ export const ConversationMessagesList: React.FC<ConversationMessagesListProps> =
       ref={scrollContainerRef}
       className={cn(
         'flex-1 overflow-y-auto px-4 py-6',
-        'scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600',
+        'bg-[var(--chat-bg)]',
+        '[overflow-anchor:none]',
+        'scrollbar-thin scrollbar-thumb-[var(--theme-border-color)]',
         'scrollbar-track-transparent'
       )}
       onScroll={handleScroll}
@@ -132,7 +166,7 @@ export const ConversationMessagesList: React.FC<ConversationMessagesListProps> =
         <EmptyState
           icon={
             <svg
-              className="w-12 h-12 text-gray-400"
+              className="w-12 h-12 text-[var(--theme-text-secondary)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -156,28 +190,26 @@ export const ConversationMessagesList: React.FC<ConversationMessagesListProps> =
               message={message}
               currentUserId={currentUserId}
               isLastMessage={index === messages.length - 1}
+              onDelete={onDelete}
+              readStatus={getReadStatus(message)}
+              conversationType={conversationType}
             />
           ))}
           
-          {/* Загрузочный индикатор */}
+          {/* Загрузочный индикатор — скелетон-сообщения (R-14, T2) */}
           {isLoading && (
-            <div className="flex justify-center py-4">
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <svg
-                  className="w-5 h-5 animate-spin"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span className="text-sm">Загрузка...</span>
-              </div>
+            <div role="status" aria-live="polite">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex gap-3 mb-4 animate-pulse">
+                  {/* Аватар */}
+                  <div className="w-10 h-10 rounded-full bg-[var(--theme-bg-secondary)] flex-shrink-0" />
+                  {/* Пузырёк */}
+                  <div className="flex flex-col max-w-[70%] space-y-2">
+                    <div className="h-3 bg-[var(--theme-bg-secondary)] rounded w-20" />
+                    <div className="h-10 bg-[var(--theme-bg-secondary)] rounded-lg w-48" />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

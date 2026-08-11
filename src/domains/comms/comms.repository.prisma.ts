@@ -13,8 +13,8 @@
  * @see src/domains/comms/comms.repository.interface.ts
  */
 import { prisma } from '@/infrastructure/prisma/client';
+import { Prisma } from '@prisma/client';
 import type {
-  ChatListItem,
   ChatListResponse,
   ChatParticipantListItem,
   ChatParticipantsListResponse,
@@ -23,11 +23,13 @@ import type {
   ConversationParticipant,
   CreateChatData,
   Message,
+  MessageWithReadStatus,
   ParticipantRole,
+  UnreadCounts,
   UpdateChatData,
 } from './comms.types';
 import type { ICommsRepository, GetUserConversationsOptions, CreateMessageData } from './comms.repository.interface';
-import { CannotEditChatError, ParticipantAlreadyExistsError, CannotAddParticipantError, ChatParticipantNotFoundError, BadRequestError } from './comms.errors';
+import { CannotEditChatError, DuplicateConversationError, ParticipantAlreadyExistsError, ParticipantNotFoundError } from './comms.errors';
 
 /**
  * @class PrismaCommsRepository
@@ -54,7 +56,8 @@ export class PrismaCommsRepository implements ICommsRepository {
    * - Шаг 2: Для каждого диалога получить данные через bulk queries:
    *   - Конверсация (conversation data)
    *   - Последнее сообщение (last message ordered by createdAt DESC, take 1)
-   *   - Непрочитанные (count messages where createdAt > lastReadAt AND senderId !== userId)
+   *   - Непрочитанные (count messages where createdAt > lastReadAt AND senderId !== userId
+   *     AND isDeleted = false — B-027, причина #3: удалённые сообщения не учитываются)
    *   - Собеседник (другой participant + user profile)
    * - Шаг 3: Применить поиск по имени собеседника
    * - Шаг 4: Сортировка по lastMessageAt DESC
@@ -136,6 +139,7 @@ export class PrismaCommsRepository implements ICommsRepository {
           select: {
             id: true,
             email: true,
+            name: true,
             profile: {
               select: {
                 first_name: true,
@@ -147,7 +151,7 @@ export class PrismaCommsRepository implements ICommsRepository {
         })
       : [];
 
-    type UserData = { id: string; email: string | null; profile: { first_name: string; last_name: string; avatar: string | null } | null } | null;
+    type UserData = { id: string; email: string | null; name: string | null; profile: { first_name: string; last_name: string; avatar: string | null } | null } | null;
     const userMap = new Map<string, UserData>(
       peerUsers.map((u) => [u.id, u])
     );
@@ -175,17 +179,44 @@ export class PrismaCommsRepository implements ICommsRepository {
     }
 
     // Step 7: Построить список диалогов
-    const items = await Promise.all(
-      conversations.map(async (conversation) => {
-        const participant = participantMap.get(conversation.id)!;
-        const peerId = peerByConversation.get(conversation.id) ?? '';
-        const peerUser = peerId ? userMap.get(peerId) : null;
+    /**
+     * B-031: Защита non-null assertion для participantMap.get().
+     *
+     * Ранее использовался оператор `!` (`participantMap.get(conversation.id)!`),
+     * что при отсутствии participant в Map приводило к TypeError и HTTP 500.
+     *
+     * Паттерн обработки: `return null` внутри `.map()` callback (НЕ `continue` —
+     * запрещён в `.map()`), последующая фильтрация через type guard
+     * `.filter((item): item is NonNullable<typeof item> => item !== null)`.
+     *
+     * @task B031-T2-1
+     * @see docs/specs/comms/B-031-component-spec.md (раздел 3.2.1)
+     * @see docs/plans/REQ-COMMS-004-B031-plan.md (задача T2-1)
+     */
+    const items = (
+      await Promise.all(
+        conversations.map(async (conversation) => {
+          const participant = participantMap.get(conversation.id);
+          if (!participant) {
+            // B031-T2-1: корректная обработка отсутствующего participant
+            // вместо non-null assertion, которое приводило к TypeError → 500
+            console.warn(
+              `[CommsRepository] Participant not found for conversation ${conversation.id}, skipping`
+            );
+            return null;
+          }
+          const peerId = peerByConversation.get(conversation.id) ?? '';
+          const peerUser = peerId ? userMap.get(peerId) : null;
 
         // Формирование имени собеседника
+        // Приоритет: 1) firstName+lastName из профиля, 2) user.name, 3) user.email, 4) "Удалённый пользователь"
         const profile = peerUser?.profile;
         const firstName = profile?.first_name ?? '';
         const lastName = profile?.last_name ?? '';
-        const participantName = [firstName, lastName].filter(Boolean).join(' ') || 'Удалённый пользователь';
+        const fullName = [firstName, lastName].filter(Boolean).join(' ');
+        const userName = peerUser?.name ?? '';
+        const userEmail = peerUser?.email ?? '';
+        const participantName = fullName || userName || userEmail || 'Удалённый пользователь';
 
         // Аватар собеседника
         const participantAvatar = profile?.avatar ?? null;
@@ -206,22 +237,26 @@ export class PrismaCommsRepository implements ICommsRepository {
           where: {
             conversationId: conversation.id,
             senderId: { not: userId },
+            isDeleted: false,
             createdAt: { gt: participant.lastReadAt ?? new Date(0) },
           },
         });
 
-        return {
-          conversationId: conversation.id,
-          participantId: peerId,
-          participantName,
-          participantEmail: peerUser?.email ?? null,
-          participantAvatar,
-          lastMessagePreview,
-          lastMessageAt,
-          unreadCount,
-        };
-      })
-    );
+          return {
+            conversationId: conversation.id,
+            participantId: peerId,
+            participantName,
+            participantEmail: peerUser?.email ?? null,
+            participantAvatar,
+            lastMessagePreview,
+            lastMessageAt,
+            unreadCount,
+          };
+        })
+      )
+      // B031-T2-1: фильтруем диалоги без participant (return null выше)
+      // type guard сужает тип до NonNullable
+    ).filter((item): item is NonNullable<typeof item> => item !== null);
 
     // Step 8: Применение поиска по имени собеседника
     let filteredItems = items;
@@ -301,7 +336,28 @@ export class PrismaCommsRepository implements ICommsRepository {
   }
 
   /**
-   * Найти личный диалог между двумя пользователями
+   * Проверить существование пользователя по ID
+   *
+   * @param userId - ID пользователя
+   * @returns true если пользователь существует
+   *
+   * @spec
+   * - Простой findUnique по id (select id)
+   * - Возвращает false если пользователь не найден (НЕ бросает ошибку)
+   *
+   * @b030 B-030 (Д2): используется в startConversation перед createConversation,
+   * чтобы несуществующий собеседник давал 4xx, а не P2003 (внешний ключ) → 200.
+   */
+  async userExists(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    return user !== null;
+  }
+
+  /**
+   * Найти личный (DIRECT) диалог между двумя пользователями
    *
    * @param userAId - ID первого пользователя
    * @param userBId - ID второго пользователя
@@ -309,50 +365,66 @@ export class PrismaCommsRepository implements ICommsRepository {
    *
    * @spec
    * - Ищет диалог типа DIRECT, где участниками являются оба пользователя
-   * - Порядок userA/userB не важен
+   * - Порядок userA/userB не важен (A,B = B,A)
    * - Возвращает null если диалог не найден (НЕ бросает ошибку)
+   *
+   * @optimization B-029 T2-1 (P2-3): единый findMany вместо N+1 цикла.
+   * Запрос participant-записей обоих пользователей за один SQL-запрос,
+   * группировка по conversationId в памяти, выбор общего conversationId,
+   * затем одна проверка type='DIRECT'.
+   *
+   * @traces B-029 T2-1, AC-04 (REQ-COMMS-004)
    */
   async findConversationBetween(userAId: string, userBId: string): Promise<Conversation | null> {
-    // Найти все DIRECT диалоги где userA участник
-    const userAConversations = await prisma.conversationParticipant.findMany({
-      where: { userId: userAId },
-      select: { conversationId: true },
+    // Найти participant-записи для обоих пользователей одним запросом
+    const participants = await prisma.conversationParticipant.findMany({
+      where: { userId: { in: [userAId, userBId] } },
+      select: { conversationId: true, userId: true },
     });
 
-    if (userAConversations.length === 0) {
+    if (participants.length === 0) {
       return null;
     }
 
-    // Проверить каждый диалог на наличие userB как участника
-    for (const { conversationId } of userAConversations) {
-      const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId, type: 'DIRECT' },
-      });
-
-      if (!conversation) {
-        continue;
+    // Сгруппировать userId по conversationId
+    const convParticipants = new Map<string, Set<string>>();
+    for (const p of participants) {
+      let set = convParticipants.get(p.conversationId);
+      if (!set) {
+        set = new Set<string>();
+        convParticipants.set(p.conversationId, set);
       }
-
-      const userBParticipant = await prisma.conversationParticipant.findFirst({
-        where: { conversationId, userId: userBId },
-        select: { id: true },
-      });
-
-      if (userBParticipant) {
-        return {
-          id: conversation.id,
-          type: conversation.type as Conversation['type'],
-          title: conversation.title,
-          description: conversation.description ?? null,
-          plotId: conversation.plotId,
-          createdBy: conversation.createdBy,
-          createdAt: conversation.createdAt,
-          updatedAt: conversation.updatedAt,
-        };
-      }
+      set.add(p.userId);
     }
 
-    return null;
+    // Найти conversationId, где оба пользователя являются участниками
+    const commonConvId = Array.from(convParticipants.entries()).find(
+      ([, userIds]) => userIds.has(userAId) && userIds.has(userBId)
+    )?.[0];
+
+    if (!commonConvId) {
+      return null;
+    }
+
+    // Проверить что это DIRECT диалог (не GROUP/ANNOUNCEMENT)
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: commonConvId, type: 'DIRECT' },
+    });
+
+    if (!conversation) {
+      return null;
+    }
+
+    return {
+      id: conversation.id,
+      type: conversation.type as Conversation['type'],
+      title: conversation.title,
+      description: conversation.description ?? null,
+      plotId: conversation.plotId,
+      createdBy: conversation.createdBy,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    };
   }
 
   /**
@@ -369,60 +441,133 @@ export class PrismaCommsRepository implements ICommsRepository {
    * - Создаёт записи в conversation_participants для каждого участника
    * - Первый участник получает роль OWNER
    * - Остальные получают роль MEMBER
+   * - lastReadAt = now() инициализируется для всех участников (B-027, причина #2:
+   *   история до создания диалога не считается непрочитанной)
    * - Выполняется в транзакции
+   *
+   * @b029 B-029 T2-1 (BR-06, NFR-03):
+   * - Для DIRECT-диалогов вычисляется pairKey = sorted(participantIds).join('|')
+   *   и сохраняется на диалоге (conversation.create data) — одна строка на диалог,
+   *   что гарантирует корректную работу partial unique index при дубликате.
+   * - При P2002 (unique constraint violation на pair_key) — race condition:
+   *   вызывается findConversationBetween для определения ID уже существующего
+   *   диалога и бросается DuplicateConversationError(existingId).
+   *   Service-слой преобразует её в ConversationAlreadyExistsError.
+   * - Для GROUP/ANNOUNCEMENT pairKey = undefined (NULL в БД, индекс не применяется).
+   *
+   * @throws {DuplicateConversationError} при race condition (P2002 на pair_key)
+   *
+   * @traces B-029 T2-1, AC-03 (REQ-COMMS-004)
    */
   async createConversation(
     type: 'DIRECT',
     participantIds: string[],
     createdBy: string
   ): Promise<Conversation> {
-    const conversation = await prisma.$transaction(async (tx) => {
-      // Создать конверсацию
-      const newConversation = await tx.conversation.create({
-        data: {
-          type,
-          createdBy,
-        },
+    try {
+      const conversation = await prisma.$transaction(async (tx) => {
+        // B-029: Вычислить pairKey для DIRECT-диалога ДО вставки.
+        // Сортировка IDs гарантирует детерминированный ключ независимо от порядка
+        // аргументов (A,B === B,A) — совпадает с backfill-логикой миграции
+        // (MIN/MAX user_id). Хранится на диалоге — одна строка на диалог.
+        const pairKey =
+          type === 'DIRECT'
+            ? [...participantIds].sort().join('|')
+            : undefined;
+
+        // Создать конверсацию
+        const newConversation = await tx.conversation.create({
+          data: {
+            type,
+            createdBy,
+            // B-029: pairKey передаётся только для DIRECT (для GROUP = undefined → NULL)
+            pairKey,
+          },
+        });
+
+        // Создать участников
+        // Для DIRECT-диалогов: инициализируем lastReadAt = now(), чтобы при
+        // создании диалога его история (пустая на момент создания) не считалась
+        // как непрочитанная (B-027, причина #2 — консистентность с GROUP).
+        await tx.conversationParticipant.createMany({
+          data: participantIds.map((userId, index) => ({
+            conversationId: newConversation.id,
+            userId,
+            role: index === 0 ? 'OWNER' : 'MEMBER',
+            lastReadAt: new Date(),
+          })),
+        });
+
+        return newConversation;
       });
 
-      // Создать участников
-      await tx.conversationParticipant.createMany({
-        data: participantIds.map((userId, index) => ({
-          conversationId: newConversation.id,
-          userId,
-          role: index === 0 ? 'OWNER' : 'MEMBER',
-        })),
-      });
+      return {
+        id: conversation.id,
+        type: conversation.type as Conversation['type'],
+        title: conversation.title,
+        description: conversation.description ?? null,
+        plotId: conversation.plotId,
+        createdBy: conversation.createdBy,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      };
+    } catch (error) {
+      // B-029: обработка race condition — параллельный запрос создал диалог первым.
+      // Unique constraint violation на pair_key (partial unique index).
+      // Repository НЕ знает о ConversationAlreadyExistsError (service-level) —
+      // использует собственный DuplicateConversationError с existingConversationId.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existing = await this.findConversationBetween(
+          participantIds[0],
+          participantIds[1]
+        );
+        if (existing) {
+          throw new DuplicateConversationError(existing.id);
+        }
+      }
 
-      return newConversation;
-    });
+      // B-030 (Д2, страховка): P2003 — внешний ключ нарушен (собеседник
+      // не существует). Service уже проверяет через userExists, но защищаемся и здесь,
+      // чтобы несуществующий участник никогда не давал 200 с сырым P2003.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ParticipantNotFoundError(participantIds[0], participantIds[1]);
+      }
 
-    return {
-      id: conversation.id,
-      type: conversation.type as Conversation['type'],
-      title: conversation.title,
-      description: conversation.description ?? null,
-      plotId: conversation.plotId,
-      createdBy: conversation.createdBy,
-      createdAt: conversation.createdAt,
-      updatedAt: conversation.updatedAt,
-    };
+      throw error;
+    }
   }
 
   /**
    * Получить все сообщения диалога
    *
    * @param conversationId - ID диалога
-   * @returns Массив сообщений, отсортированных по времени (ASC)
+   * @returns Массив сообщений с данными отправителя, отсортированных по времени (ASC)
    *
    * @spec
    * - Возвращает все сообщения включая удалённые (фильтрация на уровне UI)
    * - Сортировка: по createdAt ASC (хронологический порядок)
+   * - Включает данные отправителя (sender) для отображения имени/email
+   * - senderName формируется как "firstName lastName" из профиля пользователя
+   * - senderEmail берётся из User.email, если профиль отсутствует
+   * - senderAvatarUrl берётся из UserProfile.avatarUrl
    */
   async getConversationMessages(conversationId: string): Promise<Message[]> {
     const messages = await prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
+      include: {
+        sender: {
+          include: {
+            profile: true,
+          },
+        },
+      },
     });
 
     return messages.map(mapMessageToDomain);
@@ -432,11 +577,12 @@ export class PrismaCommsRepository implements ICommsRepository {
    * Создать новое сообщение
    *
    * @param data - Данные для создания сообщения
-   * @returns Созданный объект Message
+   * @returns Созданный объект Message с данными отправителя
    *
    * @spec
    * - Создаёт запись в messages
    * - isDeleted по умолчанию false
+   * - Включает данные отправителя (sender включается через findUnique после создания)
    */
   async createMessage(data: CreateMessageData): Promise<Message> {
     const message = await prisma.message.create({
@@ -448,21 +594,41 @@ export class PrismaCommsRepository implements ICommsRepository {
       },
     });
 
-    return mapMessageToDomain(message);
+    // После создания загружаем сообщение с данными отправителя
+    const messageWithSender = await prisma.message.findUnique({
+      where: { id: message.id },
+      include: {
+        sender: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    return mapMessageToDomain(messageWithSender ?? message);
   }
 
   /**
    * Найти сообщение по идентификатору
    *
    * @param messageId - Уникальный идентификатор сообщения
-   * @returns Объект Message или null если не найден
+   * @returns Объект Message с данными отправителя или null если не найден
    *
    * @spec
    * - Возвращает null если не найден (НЕ бросает ошибку)
+   * - Включает данные отправителя (sender) для отображения имени/email
    */
   async findMessageById(messageId: string): Promise<Message | null> {
     const message = await prisma.message.findUnique({
       where: { id: messageId },
+      include: {
+        sender: {
+          include: {
+            profile: true,
+          },
+        },
+      },
     });
 
     if (!message) {
@@ -523,7 +689,8 @@ export class PrismaCommsRepository implements ICommsRepository {
    * - Шаг 2: Для каждого чата получить данные через bulk queries:
    *   - Чат (conversation data с title)
    *   - Последнее сообщение (last message ordered by createdAt DESC, take 1)
-   *   - Непрочитанные (count messages where createdAt > lastReadAt AND senderId !== userId)
+   *   - Непрочитанные (count messages where createdAt > lastReadAt AND senderId !== userId
+   *     AND isDeleted = false — B-027, причина #3: удалённые сообщения не учитываются)
    *   - Количество участников (count participants)
    * - Шаг 3: Применить поиск по названию чата
    * - Шаг 4: Сортировка по lastMessageAt DESC
@@ -638,6 +805,7 @@ export class PrismaCommsRepository implements ICommsRepository {
           where: {
             conversationId: conversation.id,
             senderId: { not: userId },
+            isDeleted: false,
             createdAt: { gt: participant.lastReadAt ?? new Date(0) },
           },
         });
@@ -681,6 +849,14 @@ export class PrismaCommsRepository implements ICommsRepository {
    * @param creatorId - ID создателя чата
    * @param data - Данные для создания чата
    * @returns Созданный объект Conversation
+   *
+   * @spec
+   * - Создаёт запись в conversations (type = GROUP)
+   * - Создатель получает роль OWNER без инициализации lastReadAt (чата ещё нет →
+   *   история пуста, B-027, причина #2 — основатель ничего не «пропускает»)
+   * - Добавляемые участники (MEMBER) инициализируются lastReadAt = now(), чтобы
+   *   будущие сообщения корректно учитывались как непрочитанные (B-027, причина #2)
+   * - Выполняется в транзакции
    */
   async createGroupChat(
     creatorId: string,
@@ -710,11 +886,17 @@ export class PrismaCommsRepository implements ICommsRepository {
 
       // 3. Создать записи для всех участников с ролью MEMBER
       if (participantIds.length > 0) {
+        // lastReadAt = now() для участников, добавляемых при создании чата:
+        // новый чат не имеет истории до момента создания, поэтому все будущие
+        // сообщения корректно учитываются как непрочитанные (для основателя
+        // OWNER lastReadAt остаётся неинициализированным — он и так прочитал
+        // историю, т.к. чат только что создан им; B-027, причина #2).
         await tx.conversationParticipant.createMany({
           data: participantIds.map((userId) => ({
             conversationId: conversation.id,
             userId,
             role: 'MEMBER',
+            lastReadAt: new Date(),
           })),
         });
       }
@@ -766,7 +948,7 @@ export class PrismaCommsRepository implements ICommsRepository {
         throw new CannotEditChatError();
       }
     
-      const updateData: any = {};
+      const updateData: Prisma.ConversationUpdateInput = {};
       if (name !== undefined) updateData.title = name;
       if (description !== undefined) updateData.description = description;
     
@@ -902,6 +1084,8 @@ export class PrismaCommsRepository implements ICommsRepository {
    * @spec
    * - Создаёт запись в conversation_participants
    * - Проверяет что пользователь ещё не участник (бросает ParticipantAlreadyExistsError если есть)
+   * - Инициализирует lastReadAt = now(): новый участник не видит историю чата,
+   *   отправленную до вступления, как непрочитанную (B-027, причина #2)
    * - Выполняется в транзакции
    */
   async addChatParticipant(
@@ -923,11 +1107,15 @@ export class PrismaCommsRepository implements ICommsRepository {
 
     // 2. Создать запись в транзакции
     const participant = await prisma.$transaction(async (tx) => {
+      // lastReadAt = now(): новый участник не должен видеть историю чата
+      // (отправленную до вступления) как непрочитанную — учитываются только
+      // сообщения, отправленные после вступления (B-027, причина #2).
       return tx.conversationParticipant.create({
         data: {
           conversationId: chatId,
           userId,
           role,
+          lastReadAt: new Date(),
         },
       });
     });
@@ -1042,7 +1230,6 @@ export class PrismaCommsRepository implements ICommsRepository {
    * - В текущей реализации возвращает пустой массив, так как в модели User нет поля isBlocked
    */
   async getBlockedUserIds(): Promise<string[]> {
-    // TODO: реализовать поле isBlocked в модели User и добавить валидацию
     return [];
   }
 
@@ -1063,16 +1250,298 @@ export class PrismaCommsRepository implements ICommsRepository {
   ): Promise<ChatParticipantListItem | null> {
     return getChatParticipantWithDetails(chatId, userId);
   }
+
+  /**
+   * Отметить все сообщения в диалоге как прочитанные для пользователя
+   *
+   * @param conversationId - ID диалога
+   * @param userId - ID пользователя
+   *
+   * @spec
+   * - Проверяет существование participant (conversationId, userId)
+   * - Если не найден — бросает ParticipantNotFoundError (404)
+   * - UPDATE conversation_participants SET last_read_at = now()
+   * - Идемпотентно: повторный вызов не выбрасывает ошибку (AC-4)
+   *
+   * @traces US-39-01 AC-1, AC-2, AC-4
+   * @task B-026-T2-2
+   */
+  async markAsRead(conversationId: string, userId: string): Promise<void> {
+    // Шаг 1: Проверить существование participant
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!participant) {
+      throw new ParticipantNotFoundError(conversationId, userId);
+    }
+
+    // Шаг 2: Обновить lastReadAt = now() (идемпотентно)
+    await prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        lastReadAt: new Date(),
+      },
+    });
+  }
+
+  /**
+   * Получить сообщения диалога со статусом прочтения
+   *
+   * @param conversationId - ID диалога
+   * @param userId - ID текущего пользователя
+   * @returns Массив сообщений с полями статуса прочтения, отсортированный по createdAt ASC
+   *
+   * @spec
+   * - Шаг 1: Получить тип диалога (DIRECT/GROUP/ANNOUNCEMENT)
+   * - Шаг 2: Получить все сообщения (is_deleted = false) с sender
+   * - Шаг 3: Получить всех участников диалога
+   * - DIRECT: isReadByRecipient = recipient.lastReadAt >= message.createdAt
+   *   (recipient — единственный participant с userId != senderId)
+   * - GROUP: readByCount = COUNT(participants WHERE lastReadAt >= createdAt AND userId != senderId)
+   *   totalParticipants = COUNT(participants WHERE userId != senderId)
+   * - ANNOUNCEMENT: read status не применяется (isReadByRecipient=false)
+   * - Сортировка: createdAt ASC
+   *
+   * @traces US-39-02 AC-1, AC-2, AC-3, AC-6
+   * @task B-026-T2-2
+   */
+  async getMessagesWithReadStatus(
+    conversationId: string,
+    userId: string
+  ): Promise<MessageWithReadStatus[]> {
+    // Шаг 1: Получить тип диалога
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { type: true },
+    });
+
+    if (!conversation) {
+      return [];
+    }
+
+    const conversationType = conversation.type;
+
+    // Шаг 2: Получить все не удалённые сообщения с данными отправителя
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId,
+        isDeleted: false,
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sender: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    if (messages.length === 0) {
+      return [];
+    }
+
+    // Шаг 3: Получить всех участников диалога с lastReadAt
+    const participants = await prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      select: {
+        userId: true,
+        lastReadAt: true,
+      },
+    });
+
+    // Быстрый доступ к lastReadAt по userId
+    const lastReadAtMap = new Map<string, Date | null>(
+      participants.map((p) => [p.userId, p.lastReadAt])
+    );
+
+    // DIRECT: precompute recipient — единственный participant с userId != currentUserId
+    let directRecipientLastReadAt: Date | null = null;
+    if (conversationType === 'DIRECT') {
+      const recipient = participants.find((p) => p.userId !== userId);
+      directRecipientLastReadAt = recipient?.lastReadAt ?? null;
+    }
+
+    // GROUP: totalParticipants по каждому сообщению = количество участников кроме автора
+    // Поскольку участники диалога не зависят от сообщения — кэшируем общий набор
+    // (senderId может совпадать с одним из участников — он исключается)
+    const participantUserIds = participants.map((p) => p.userId);
+
+    // Шаг 4: Маппинг сообщений → MessageWithReadStatus
+    return messages.map((m) => {
+      const baseMessage = mapMessageToDomain(m);
+      const createdAt = m.createdAt;
+
+      if (conversationType === 'DIRECT') {
+        // isReadByRecipient: recipient.lastReadAt >= message.createdAt
+        const isRead =
+          directRecipientLastReadAt !== null &&
+          directRecipientLastReadAt >= createdAt;
+
+        return {
+          ...baseMessage,
+          isReadByRecipient: isRead,
+        };
+      }
+
+      if (conversationType === 'GROUP') {
+        // Количество получателей кроме автора
+        const recipients = participantUserIds.filter(
+          (uid) => uid !== m.senderId
+        );
+        const totalParticipants = recipients.length;
+
+        // Количество прочитавших среди получателей
+        let readByCount = 0;
+        for (const uid of recipients) {
+          const lastRead = lastReadAtMap.get(uid) ?? null;
+          if (lastRead !== null && lastRead >= createdAt) {
+            readByCount += 1;
+          }
+        }
+
+        return {
+          ...baseMessage,
+          isReadByRecipient: readByCount > 0,
+          readByCount,
+          totalParticipants,
+        };
+      }
+
+      // ANNOUNCEMENT и прочие: read status не применяется
+      return {
+        ...baseMessage,
+        isReadByRecipient: false,
+      };
+    });
+  }
+
+  /**
+   * Подсчитать непрочитанные сообщения по категориям для пользователя
+   *
+   * @param userId - ID текущего пользователя
+   * @returns Счётчики непрочитанных сообщений
+   *
+   * @covers AC-6 (US-21-37): API /api/v1/comms/unread-counts
+   * @see component-spec.md → 3.1.3
+   *
+   * @spec
+   * - messages: сумма непрочитанных в DIRECT диалогах
+   * - chats: сумма непрочитанных в GROUP чатах
+   * - Непрочитанное = createdAt > lastReadAt AND senderId !== userId AND isDeleted = false
+   *   (B-027, причина #3: удалённые сообщения исключаются из счётчиков)
+   */
+  async getUnreadCounts(userId: string): Promise<UnreadCounts> {
+    // Step 1: Получить все записи участника пользователя с типом диалога за один запрос
+    const participants = await prisma.conversationParticipant.findMany({
+      where: { userId },
+      select: {
+        conversationId: true,
+        lastReadAt: true,
+        conversation: {
+          select: { type: true },
+        },
+      },
+    });
+
+    // Нет диалогов — нет непрочитанных
+    if (participants.length === 0) {
+      return { messages: 0, chats: 0 };
+    }
+
+    // Step 2: Разделить участников по типу диалога
+    const directParticipants = participants.filter(
+      (p) => p.conversation.type === 'DIRECT'
+    );
+    const groupParticipants = participants.filter(
+      (p) => p.conversation.type === 'GROUP'
+    );
+
+    // Step 3: Подсчитать непрочитанные для каждого участника параллельно
+    // Непрочитанное сообщение: createdAt > lastReadAt (или lastReadAt is null) && senderId !== userId
+    const [directCounts, groupCounts] = await Promise.all([
+      Promise.all(
+        directParticipants.map((p) =>
+          prisma.message.count({
+            where: {
+              conversationId: p.conversationId,
+              senderId: { not: userId },
+              isDeleted: false,
+              createdAt: { gt: p.lastReadAt ?? new Date(0) },
+            },
+          })
+        )
+      ),
+      Promise.all(
+        groupParticipants.map((p) =>
+          prisma.message.count({
+            where: {
+              conversationId: p.conversationId,
+              senderId: { not: userId },
+              isDeleted: false,
+              createdAt: { gt: p.lastReadAt ?? new Date(0) },
+            },
+          })
+        )
+      ),
+    ]);
+
+    // Step 4: Суммировать счётчики по категориям
+    const messages = directCounts.reduce((sum, count) => sum + count, 0);
+    const chats = groupCounts.reduce((sum, count) => sum + count, 0);
+
+    return { messages, chats };
+  }
 }
 
 /**
  * Сопоставить Prisma Message → доменный тип Message
+ *
+ * @spec
+ * - Если sender (с profile) включён в Prisma-запрос — извлекает senderName, senderEmail, senderAvatarUrl
+ * - senderName формируется как "firstName lastName" из профиля, при отсутствии — User.name
+ * - senderEmail берётся из User.email
+ * - senderAvatarUrl берётся из UserProfile.avatarUrl
+ * - Если sender отсутствует (не включён или удалён) — поля остаются пустыми
+ *   (UI обработает это как "Удалённый пользователь")
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapMessageToDomain(m: any): Message {
+  // Извлечение данных отправителя, если они включены в запрос
+  let senderName = '';
+  let senderEmail = '';
+  let senderAvatarUrl: string | null = null;
+
+  if (m.sender) {
+    const profile = m.sender.profile;
+    const firstName = profile?.first_name || '';
+    const lastName = profile?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    senderName = fullName || (m.sender.name || '');
+    senderEmail = m.sender.email || '';
+    senderAvatarUrl = profile?.avatar_url || null;
+  }
+
   return {
     id: m.id,
     conversationId: m.conversationId,
     senderId: m.senderId,
+    senderName,
+    senderEmail,
+    senderAvatarUrl,
     content: m.content,
     replyToId: m.replyToId,
     isDeleted: m.isDeleted,

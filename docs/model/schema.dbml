@@ -186,16 +186,22 @@ Table conversation_participants {
   role                 varchar       [not null, default: 'MEMBER', ref: > participant_role]
   joined_at            timestamp     [default: now(), not null]
   last_read_at         timestamp
+  pair_key             varchar       [note: 'канонический ключ пары для DIRECT: sorted([userIdA,userIdB]).join("|"); NULL для GROUP/ANNOUNCEMENT; B-029']
 
   indexes {
     (conversation_id, user_id) [unique, name: 'unique_conversation_user']
     user_id
+    pair_key [unique, name: 'unique_direct_pair_key', note: 'partial unique index: WHERE pair_key IS NOT NULL (B-029)']
   }
 
   Notes:'''
     Primary key: id
     Foreign keys: conversation_id -> conversations.id, user_id -> users.id
     Unique constraint: (conversation_id, user_id)
+    BR-06 (B-029): Один личный диалог на пару — pair_key = sorted([userIdA,userIdB]).join('|'),
+                   partial unique index (WHERE pair_key IS NOT NULL) запрещает дубликаты DIRECT-диалогов
+    NFR-03 (B-029): Уникальность пары гарантируется на уровне СУБД (защита от race condition):
+                    P2002 на pair_key → DuplicateConversationError → ConversationAlreadyExistsError → HTTP 409
     '''
 }
 
@@ -280,3 +286,117 @@ Ref: messages.sender_id > users.id
 Ref: messages.reply_to_id > messages.id
 Ref: messages.deleted_by > users.id
 Ref: announcements.author_id > users.id
+// ============================================
+// Enum: document_status
+// ============================================
+Enum document_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================
+// Table: document_categories (US-22-01)
+// ============================================
+Table document_categories {
+  id           varchar       [pk, not null] // cuid()
+  name         varchar       [not null] // max 100
+  description  varchar                            // max 500, optional
+  parent_id    varchar       [ref: > document_categories.id]
+  created_at   timestamp     [default: now(), not null]
+  updated_at   timestamp     [default: now(), not null]
+
+  indexes {
+    (name, parent_id) [unique, name: unique_name_per_parent]
+    parent_id
+  }
+
+  Notes:'''
+    Primary key: id
+    Foreign key: parent_id -> document_categories.id (self-reference)
+    Unique constraint: (name, parent_id) - unique name per parent level
+    BR-03: Category can be nested (subcategory) or root
+    '''
+}
+
+// ============================================
+// Table: documents (US-22-03)
+// ============================================
+Table documents {
+  id             varchar       [pk, not null] // cuid()
+  title          varchar       [not null] // max 255
+  description    varchar                            // text, optional
+  original_name  varchar       [not null] // max 255
+  storage_path   varchar                            // max 500, optional
+  file_size      integer       [not null]
+  mime_type      varchar       [not null] // max 100
+  category_id    varchar       [ref: > document_categories.id]
+  document_type  varchar       [not null] // max 50
+  visible_roles  json          [not null] // default: [ADMIN]
+  status         varchar       [not null, default: DRAFT, ref: > document_status]
+  uploaded_by_id varchar       [not null, ref: > users.id]
+  created_at     timestamp     [default: now(), not null]
+  updated_at     timestamp     [default: now(), not null]
+
+  indexes {
+    category_id
+    document_type
+    status
+    (status, created_at)
+    uploaded_by_id
+  }
+
+  Notes:'''
+    Primary key: id
+    Foreign keys: category_id -> document_categories.id, uploaded_by_id -> users.id
+    BR-02: Document belongs to exactly one category
+    BR-05: Document has exactly one status
+    BR-06: Statuses: draft, published, archived
+    BR-07: Draft documents are only visible to ADMIN
+    BR-08: Archived documents cannot be edited
+    BR-04: visible_roles is a JSON array of role names
+    '''
+}
+
+// ============================================
+// Table: document_tags (US-22-04)
+// ============================================
+Table document_tags {
+  id         varchar       [pk, not null] // cuid()
+  name       varchar       [unique, not null] // max 50
+  created_at timestamp     [default: now(), not null]
+
+  Notes:'''
+    Primary key: id
+    Unique constraint: name
+    BR-10: Tags are configurable (created on-demand)
+    '''
+}
+
+// ============================================
+// Table: document_tag_links (US-22-04, M:N junction)
+// ============================================
+Table document_tag_links {
+  document_id  varchar       [not null, ref: > documents.id]
+  tag_id       varchar       [not null, ref: > document_tags.id]
+
+  indexes {
+    tag_id
+  }
+
+  Notes:'''
+    Composite primary key: (document_id, tag_id)
+    Foreign keys: document_id -> documents.id, tag_id -> document_tags.id
+    Cascade delete on both sides
+    BR-11: Search by tags via this junction table
+    '''
+}
+
+// ============================================
+// Document Domain Relationships
+// ============================================
+Ref: document_categories.parent_id > document_categories.id
+Ref: documents.category_id > document_categories.id
+Ref: documents.uploaded_by_id > users.id
+Ref: document_tag_links.document_id > documents.id
+Ref: document_tag_links.tag_id > document_tags.id

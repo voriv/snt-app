@@ -146,6 +146,7 @@ export const createChatSchema = z.object({
     .max(500, 'Описание не может превышать 500 символов')
     .optional()
     .or(z.literal(''))
+    .or(z.null())
     .transform((val) => (val === '' || val === undefined ? null : val)),
   /** ID участников (минимум 1, максимум 50) — без учёта создателя */
   participantIds: z
@@ -323,3 +324,18 @@ export const removeChatParticipantSchema = z.object({
 });
 
 export type RemoveChatParticipantData = z.infer<typeof removeChatParticipantSchema>;
+
+/**
+ * @schema markAsReadSchema
+ * @domain comms
+ * @description Валидация ID диалога для отметки прочитанных
+ *
+ * @traces US-39-01 AC-4
+ * @task B-026-T3-1
+ */
+export const markAsReadSchema = z.object({
+  /** ID диалога (CUID или UUID) */
+  id: z.string().cuid('Некорректный ID диалога').or(z.string().uuid('Некорректный ID диалога')),
+});
+
+export type MarkAsReadData = z.infer<typeof markAsReadSchema>;

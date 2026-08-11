@@ -11,8 +11,8 @@
 import type { IAuthRepository } from './auth.repository.interface';
 import { AuthRepository } from './auth.repository.prisma';
 import type { RegisterData, UserData, LoginData, UserWithPassword } from './auth.types';
-import { registerSchema, loginSchema } from './auth.validators';
-import { GuestRoleMissingError, UserDuplicateError, UserInvalidDataError, InvalidCredentialsError } from './auth.errors';
+import { registerSchema, loginSchema, changePasswordSchema } from './auth.validators';
+import { GuestRoleMissingError, UserDuplicateError, UserInvalidDataError, InvalidCredentialsError, InvalidCurrentPasswordError, NewPasswordMatchesCurrentError } from './auth.errors';
 import { ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
 
@@ -143,6 +143,86 @@ export class AuthService {
 
       // Прочие ошибки (БД недоступна, сбой bcrypt и т.д.) → общая ошибка
       throw new UserInvalidDataError('Ошибка при входе');
+    }
+  }
+
+  /**
+   * Сменить пароль пользователя
+   *
+   * @param email - Email текущего пользователя (из сессии)
+   * @param data - Данные смены пароля: currentPassword, newPassword, confirmPasswordNew
+   * @returns void
+   * @throws {UserInvalidDataError} при ошибке валидации входных данных
+   * @throws {InvalidCurrentPasswordError} если текущий пароль неверный
+   * @throws {NewPasswordMatchesCurrentError} если новый пароль совпадает с текущим
+   *
+   * @spec
+   * - Шаг 1: Валидация данных через changePasswordSchema — Zod (AC-9.4, AC-9.5)
+   * - Шаг 2: Найти пользователя с хешем пароля через repository.findByEmailWithPassword
+   * - Шаг 3: Если пользователь не найден — UserNotFoundError / UserInvalidDataError
+   * - Шаг 4: Проверить текущий пароль через bcrypt.compare (AC-9.2)
+   * - Шаг 5: Проверить что новый пароль ≠ текущий через bcrypt.compare (AC-9.3)
+   * - Шаг 6: Захэшировать новый пароль через bcrypt.hash — salt rounds = 10
+   * - Шаг 7: Сохранить новый хеш через repository.updatePassword (AC-9.1)
+   * - Шаг 8: Сессии сохраняются — ничего не делаем (BR-11)
+   *
+   * @covers AC-9.1
+   * @covers AC-9.2
+   * @covers AC-9.3
+   * @covers AC-9.4
+   * @covers AC-9.5
+   *
+   * @see docs/requirements/REQ-AUTH-001.md — BR-08..BR-12, FR-09..FR-12
+   * @see docs/user-stories/US-12-активная-смена-пароля-пользователем.md
+   */
+  async changePassword(email: string, data: unknown): Promise<void> {
+    try {
+      // Шаг 1: Валидация входных данных через Zod-схему
+      const validated = changePasswordSchema.parse(data);
+
+      // Шаг 2: Найти пользователя с хешем пароля
+      const user = await this.repository.findByEmailWithPassword(email);
+      if (!user) {
+        throw new UserInvalidDataError('Пользователь не найден');
+      }
+
+      // Шаг 4: Проверить текущий пароль
+      const currentValid = await bcrypt.compare(validated.currentPassword, user.passwordHash);
+      if (!currentValid) {
+        throw new InvalidCurrentPasswordError();
+      }
+
+      // Шаг 5: Проверить что новый пароль ≠ текущий
+      const samePassword = await bcrypt.compare(validated.newPassword, user.passwordHash);
+      if (samePassword) {
+        throw new NewPasswordMatchesCurrentError();
+      }
+
+      // Шаг 6: Захэшировать новый пароль
+      const newHash = await bcrypt.hash(validated.newPassword, BCRYPT_SALT_ROUNDS);
+
+      // Шаг 7: Сохранить в БД
+      await this.repository.updatePassword(user.id, newHash);
+
+      // Шаг 8: Сессии сохраняются (BR-11) — ничего не делаем
+    } catch (error) {
+      // Доменные ошибки перебрасываются как есть
+      if (
+        error instanceof InvalidCurrentPasswordError ||
+        error instanceof NewPasswordMatchesCurrentError ||
+        error instanceof UserInvalidDataError
+      ) {
+        throw error;
+      }
+
+      // Zod-ошибка валидации → UserInvalidDataError с конкретным сообщением
+      if (error instanceof ZodError) {
+        const firstIssue = error.issues[0];
+        throw new UserInvalidDataError(firstIssue?.message ?? 'Некорректные данные');
+      }
+
+      // Прочие ошибки (БД, bcrypt) → общая ошибка
+      throw new UserInvalidDataError('Ошибка при смене пароля');
     }
   }
 }

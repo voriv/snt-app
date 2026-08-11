@@ -95,7 +95,12 @@ describe('PlotUserRoleRepository (Integration)', () => {
     await prisma.userRole.deleteMany();
     await prisma.userProfile.deleteMany();
     await prisma.plot.deleteMany();
-    await prisma.user.deleteMany();
+    // Сохраняем глобальных тестовых пользователей (нужны для roles.test.ts)
+    await prisma.user.deleteMany({
+      where: {
+        NOT: { email: { contains: 'test-search-user' } },
+      },
+    });
   });
 
   describe('create', () => {

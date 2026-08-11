@@ -36,6 +36,28 @@ tests/components/
 │   │   ├── ParticipantFilters.test.tsx
 │   │   ├── ParticipantSearch.test.tsx
 │   │   └── PlotUserForm.test.tsx
+│   ├── comms/
+│   │   ├── ChatList.render.test.tsx                    # ✨ NEW (B-022) — перенос ChatList в features/comms (R-21)
+│   │   ├── CommsTab.test.tsx
+│   │   ├── CommsTabs.test.tsx
+│   │   ├── ConversationCard.test.tsx                   # ✨ NEW (B-022) — аватар h-10 w-10 (R-18), chevron/hover (R-29)
+│   │   ├── ConversationEmptyState.test.tsx
+│   │   ├── ConversationList.skeleton.test.tsx          # ✨ NEW (B-020)
+│   │   ├── ConversationMessagesList.skeleton.test.tsx  # ✨ NEW (B-020)
+│   │   ├── comms-pages.skeleton.test.tsx               # ✨ NEW (B-020)
+│   │   ├── comms-breadcrumbs.test.tsx                  # ✨ NEW (B-020)
+│   │   ├── comms-pages-spinner-a11y.test.tsx           # ✨ NEW (B-021)
+│   │   ├── edit-page-notfound.test.tsx                 # ✨ NEW (B-022) — fallback «чат не найден» (R-28)
+│   │   ├── EditChatForm.test.tsx
+│   │   ├── MessageInput.test.tsx
+│   │   ├── MessageItem.test.tsx
+│   │   ├── MessageItem.delete.test.tsx                 # ✨ NEW (B-020)
+│   │   ├── MessageItem.no-accent.test.tsx              # ✨ NEW (B-022) — отсутствие bg-акцента isLastMessage (R-24)
+│   │   ├── ParticipantSelector.a11y.test.tsx           # ✨ NEW (B-021)
+│   │   ├── ReadReceiptIcon.test.tsx
+│   │   └── UserSelectorList.test.tsx
+│   ├── documents/
+│   │   └── documents-badges-tokens.test.tsx           # ✨ NEW (B-021)
 │   ├── userProfile/
 │   │   ├── UserProfileForm.test.tsx
 │   │   └── AvatarUpload.test.tsx

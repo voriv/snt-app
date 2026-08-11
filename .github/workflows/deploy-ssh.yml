@@ -1,0 +1,167 @@
+# ============================================
+# Deploy via SSH (Git Pull + NPM)
+# ============================================
+# Развёртывание через прямое SSH-подключение
+# к серверу с выполнением git pull и npm команд
+# ============================================
+
+name: Deploy via SSH
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Возможность ручного запуска
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  # ============================================
+  # Job 1: Тестирование перед деплоем
+  # ============================================
+  test:
+    name: Test Before Deploy
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: snt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Push database schema
+        run: npm run db:push
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/snt_test
+
+  # ============================================
+  # Job 2: Деплой на сервер через SSH
+  # ============================================
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: test  # Запускается только после успешных тестов
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          timeout: 300s  # Таймаут 5 минут
+          script_stop: true  # Остановить при ошибке
+          script: |
+            echo "=========================================="
+            echo "  Начато развёртывание SNТ приложения"
+            echo "=========================================="
+            
+            # Переход в директорию приложения
+            cd /var/www/snt-app
+            
+            # Создание бэкапа .env на случай сбоя
+            if [ -f .env ]; then
+              cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Обновление кода
+            echo "Обновление кода..."
+            git stash
+            git checkout main
+            git pull origin main
+            
+            # Установка зависимостей
+            echo "Установка зависимостей..."
+            npm ci --only=production
+            
+            # Генерация Prisma Client
+            echo "Генерация Prisma Client..."
+            npm run db:generate
+            
+            # Применение миграций БД
+            echo "Применение миграций БД..."
+            npm run db:push
+            
+            # За(seed) данных если нужно
+            # npm run db:seed
+            
+            # Сборка приложения
+            echo "Сборка приложения..."
+            npm run build
+            
+            # Перезапуск systemd сервиса
+            echo "Перезапуск сервиса..."
+            sudo systemctl restart snt-app
+            
+            # Ожидание запуска
+            sleep 3
+            
+            # Проверка статуса сервиса
+            echo "Проверка статуса..."
+            sudo systemctl status snt-app --no-pager || true
+            
+            # Проверка доступности приложения
+            echo "Проверка доступности..."
+            curl -f http://localhost:3000 || echo "Предупреждение: приложение ещё не отвечает"
+            
+            echo ""
+            echo "=========================================="
+            echo "  Развёртывание завершено успешно!"
+            echo "=========================================="
+
+      - name: Notify on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            echo "ОШИБКА: Развёртывание не удалось!"
+            echo "Последний коммит: ${{ github.sha }}"
+            echo "Автор: ${{ github.actor }}"
+            sudo systemctl status snt-app --no-pager || true

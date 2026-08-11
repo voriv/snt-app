@@ -7,10 +7,10 @@ export { expect };
 export const TEST_USERS = {
   admin: {
     email: 'admin@snt.local',
-    password: 'Admin123!',
+    password: 'adm2snt',
     role: 'ADMIN' as const,
-    firstName: 'Админ',
-    lastName: 'Пользователь',
+    firstName: 'Администратор',
+    lastName: 'СНТ',
   },
   member: {
     email: 'member@snt.local',
@@ -67,6 +67,10 @@ export async function login(
   email: string,
   password: string
 ): Promise<void> {
+  // Очищаем куки, чтобы сбросить текущую сессию (если пользователь уже аутентифицирован)
+  await page.context().clearCookies();
+  
+  // Переходим на страницу входа
   await page.goto('/login');
   
   // Вводим email

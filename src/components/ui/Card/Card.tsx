@@ -9,7 +9,7 @@ export interface CardProps {
 
 export function Card({ children, className }: CardProps) {
   return (
-    <div className={cn('bg-white shadow rounded-lg', className)}>
+    <div className={cn('bg-[var(--theme-bg-primary)] border border-[var(--theme-border-color)] shadow-sm rounded-lg', className)}>
       {children}
     </div>
   );
@@ -17,7 +17,7 @@ export function Card({ children, className }: CardProps) {
 
 export function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('px-6 py-4 border-b border-gray-200', className)}>
+    <div className={cn('px-6 py-4 border-b border-[var(--theme-border-color)]', className)}>
       {children}
     </div>
   );
@@ -25,7 +25,7 @@ export function CardHeader({ children, className }: { children: React.ReactNode;
 
 export function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <h3 className={cn('text-lg font-semibold text-gray-900', className)}>
+    <h3 className={cn('text-lg font-semibold text-[var(--theme-text-primary)]', className)}>
       {children}
     </h3>
   );
@@ -39,7 +39,7 @@ export function CardFooter({ children, className }: { children: React.ReactNode;
   return (
     <div
       className={cn(
-        'px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg',
+        'px-6 py-4 bg-[var(--theme-bg-secondary)] border-t border-[var(--theme-border-color)] rounded-b-lg',
         className,
       )}
     >

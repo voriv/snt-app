@@ -17,12 +17,14 @@ import type { ICommsRepository } from '@/domains/comms/comms.repository.interfac
 import type { Conversation, ConversationListResponse, CreateConversationResult, Message } from '@/domains/comms/comms.types';
 import {
   ConversationNotFoundError,
+  ConversationAlreadyExistsError,
   CannotMessageSelfError,
   ConversationAccessDeniedError,
   MessageNotFoundError,
   MessageTooLargeError,
   CannotDeleteOthersMessageError,
   ChatNameExistsError,
+  BadRequestError,
 } from '@/domains/comms/comms.errors';
 
 // Helper to create a mock repository
@@ -32,6 +34,7 @@ function createMockRepository(overrides: Partial<ICommsRepository> = {}): IComms
     getUserGroupChats: vi.fn(),
     findById: vi.fn(),
     isParticipant: vi.fn(),
+    userExists: vi.fn().mockResolvedValue(true),
     findConversationBetween: vi.fn(),
     createConversation: vi.fn(),
     getConversationMessages: vi.fn(),
@@ -49,6 +52,7 @@ function createMockRepository(overrides: Partial<ICommsRepository> = {}): IComms
     updateParticipantRole: vi.fn().mockResolvedValue(null),
     removeChatParticipant: vi.fn().mockResolvedValue(undefined),
     getChatParticipantWithDetails: vi.fn().mockResolvedValue(null),
+    getUnreadCounts: vi.fn(),
     ...overrides,
   } as ICommsRepository;
 }
@@ -304,17 +308,14 @@ describe('CommsService', () => {
       );
     });
 
-    it('should return existing conversation when one already exists', async () => {
+    it('should throw ConversationAlreadyExistsError when one already exists (B-029)', async () => {
       const existingConversation: Conversation = createTestConversation({ id: 'conv-existing' });
 
       vi.mocked(mockRepo.findConversationBetween).mockResolvedValue(existingConversation);
 
-      const result = await service.startConversation('user-1', { participantId: 'user-2' });
-
-      expect(result).toEqual<CreateConversationResult>({
-        conversationId: 'conv-existing',
-        isNew: false,
-      });
+      await expect(
+        service.startConversation('user-1', { participantId: 'user-2' })
+      ).rejects.toThrow(ConversationAlreadyExistsError);
       expect(mockRepo.findConversationBetween).toHaveBeenCalledWith('user-1', 'user-2');
       expect(mockRepo.createConversation).not.toHaveBeenCalled();
     });
@@ -323,6 +324,16 @@ describe('CommsService', () => {
       await expect(
         service.startConversation('user-1', { participantId: 'user-1' })
       ).rejects.toThrow(CannotMessageSelfError);
+      expect(mockRepo.findConversationBetween).not.toHaveBeenCalled();
+      expect(mockRepo.createConversation).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestError when participant does not exist (B-030)', async () => {
+      vi.mocked(mockRepo.userExists).mockResolvedValue(false);
+
+      await expect(
+        service.startConversation('user-1', { participantId: 'ghost-user' })
+      ).rejects.toThrow(BadRequestError);
       expect(mockRepo.findConversationBetween).not.toHaveBeenCalled();
       expect(mockRepo.createConversation).not.toHaveBeenCalled();
     });
@@ -696,6 +707,65 @@ describe('CommsService', () => {
       });
 
       expect(mockRepo.groupChatExistsByName).not.toHaveBeenCalled();
+    });
+  });
+
+  // ====================================================================
+  // US-21-37: Счётчики непрочитанных на вкладках "Общение"
+  // ====================================================================
+
+  describe('getUnreadCounts (US-21-37)', () => {
+    it('should return unread counts delegating to repository', async () => {
+      const expected = { messages: 5, chats: 3 };
+      vi.mocked(mockRepo.getUnreadCounts).mockResolvedValue(expected);
+
+      const result = await service.getUnreadCounts('user-1');
+
+      expect(result).toEqual(expected);
+      expect(mockRepo.getUnreadCounts).toHaveBeenCalledWith('user-1');
+    });
+
+    it('should return zero counts when no unread messages', async () => {
+      const expected = { messages: 0, chats: 0 };
+      vi.mocked(mockRepo.getUnreadCounts).mockResolvedValue(expected);
+
+      const result = await service.getUnreadCounts('user-1');
+
+      expect(result).toEqual(expected);
+      expect(mockRepo.getUnreadCounts).toHaveBeenCalledWith('user-1');
+    });
+
+    it('should return counts with only messages unread', async () => {
+      const expected = { messages: 10, chats: 0 };
+      vi.mocked(mockRepo.getUnreadCounts).mockResolvedValue(expected);
+
+      const result = await service.getUnreadCounts('user-1');
+
+      expect(result).toEqual(expected);
+    });
+
+    it('should return counts with only chats unread', async () => {
+      const expected = { messages: 0, chats: 7 };
+      vi.mocked(mockRepo.getUnreadCounts).mockResolvedValue(expected);
+
+      const result = await service.getUnreadCounts('user-1');
+
+      expect(result).toEqual(expected);
+    });
+
+    it('should pass through large counts from repository', async () => {
+      const expected = { messages: 150, chats: 200 };
+      vi.mocked(mockRepo.getUnreadCounts).mockResolvedValue(expected);
+
+      const result = await service.getUnreadCounts('user-1');
+
+      expect(result).toEqual(expected);
+    });
+
+    it('should propagate repository errors', async () => {
+      vi.mocked(mockRepo.getUnreadCounts).mockRejectedValue(new Error('DB error'));
+
+      await expect(service.getUnreadCounts('user-1')).rejects.toThrow('DB error');
     });
   });
 });

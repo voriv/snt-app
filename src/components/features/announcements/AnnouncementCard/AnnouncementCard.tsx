@@ -7,7 +7,7 @@
  * ```tsx
  * <AnnouncementCard
  *   announcement={item}
- *   onClick={() => router.push(`/dashboard/announcements/${item.id}`)}
+ *   onClick={() => router.push(`/dashboard/comms/announcements/${item.id}`)}
  * />
  * ```
  *

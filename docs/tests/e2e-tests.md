@@ -14,39 +14,83 @@ End-to-End (E2E) тесты проверяют полные пользовате
 
 ```
 tests/e2e/
-├── setup.ts                    # Глобальная настройка (browser, context, storageState)
-├── global.teardown.ts          # Очистка тестовых данных
-├── auth.spec.ts                # Аутентификация (регистрация, вход, выход)
-├── plots.spec.ts               # Управление участками (CRUD, поиск)
-├── plot-users.spec.ts          # Управление участниками (CRUD, фильтры, поиск)
-├── profile.spec.ts             # Редактирование профиля, смена темы
-├── navigation.spec.ts          # Навигация, роутинг, доступ по ролям
+├── auth/
+│   ├── login.e2e.spec.ts               # Вход (US-04, US-05)
+│   ├── register.e2e.spec.ts            # Регистрация (US-06, US-07)
+│   ├── auth-errors.e2e.spec.ts         # Ошибки аутентификации (US-11)
+│   ├── callback-url.spec.ts            # Callback URL при редиректе
+│   ├── landing-redirect.e2e.spec.ts    # Редирект с лендинга
+│   ├── change-password.e2e.spec.ts     # Смена пароля (US-12, B-015) ✨ НОВЫЙ
+│   └── helpers.ts                      # Помощники для auth-тестов
+├── announcements/
+│   └── announcements.e2e.spec.ts       # Объявления (US-21-27..29)
+├── chats/
+│   └── chats.e2e.spec.ts               # Групповые чаты (US-21-04..06)
+├── comms/
+│   ├── comms-tabs.e2e.spec.ts          # Навигация по вкладкам (US-21-36)
+│   ├── conversations-list.e2e.spec.ts  # Список диалогов (US-21-01)
+│   └── new-conversation.e2e.spec.ts    # Новый диалог (US-21-02)
+├── documents/
+│   ├── documents-categories.e2e.spec.ts # Категории документов (US-22-01..02)
+│   ├── documents-upload.e2e.spec.ts     # Загрузка (US-22-03..04)
+│   ├── documents-list.e2e.spec.ts       # Список (US-22-05)
+│   ├── documents-detail.e2e.spec.ts     # Детали (US-22-06)
+│   ├── documents-edit.e2e.spec.ts       # Редактирование (US-22-07)
+│   └── fixtures.ts                      # Фикстуры для documents
+├── navigation/
+│   ├── 404.e2e.spec.ts                 # Страница 404 (US-NAV-03)
+│   ├── breadcrumbs.e2e.spec.ts          # Хлебные крошки (US-NAV-06)
+│   ├── mobile-menu.e2e.spec.ts          # Мобильное меню (US-NAV-07)
+│   ├── redirects.e2e.spec.ts            # Редиректы (US-NAV-01)
+│   └── sidebar.e2e.spec.ts             # Боковое меню (US-NAV-05)
+├── plots/
+│   ├── plot-card-view.e2e.spec.ts      # Карточка участка (US-17)
+│   ├── plot-creation.e2e.spec.ts       # Создание (US-14)
+│   ├── plot-deletion.e2e.spec.ts       # Удаление (US-16)
+│   ├── plot-editing.e2e.spec.ts        # Редактирование (US-15)
+│   ├── plot-list.e2e.spec.ts           # Список участков
+│   ├── plot-search.e2e.spec.ts         # Поиск (US-18)
+│   └── fixtures.ts                     # Фикстуры для plots
+├── profile/
+│   └── profile.e2e.spec.ts             # Профиль (US-19-01..06)
+├── roles/
+│   ├── role-guard.e2e.spec.ts          # Защита по ролям (US-03)
+│   └── roles-crud.e2e.spec.ts          # CRUD ролей
+├── users/
+│   └── users.e2e.spec.ts               # Управление пользователями (US-20-01..04)
 └── shared/
-    ├── fixtures.ts             # Пользовательские фикстуры
-    └── test-helpers.ts         # Переиспользуемые хелперы
+    ├── test-helpers.ts                 # Общие помощники (login, createPlot, etc.)
+    └── .gitkeep
 ```
 
 ---
 
 ## 2. Конфигурация Playwright
 
-### playwright.config.ts
+### [`playwright.config.ts`](../../playwright.config.ts) (актуальный)
 
 ```typescript
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * Playwright конфигурация для E2E тестирования SNT App
+ * @see https://playwright.dev/docs/configuration
+ */
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 2,
+  timeout: 60000,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
   },
   projects: [
     {
@@ -66,7 +110,11 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    env: {
+      DATABASE_URL: 'postgresql://test:test@localhost:5433/snt_test',
+    },
   },
+  testIgnore: '**/*.test.ts', // Ignore vitest test files
 });
 ```
 
@@ -382,87 +430,31 @@ test.describe('Навигация и доступ', () => {
 
 ---
 
-## 5. Чек-лист тестируемых сценариев
-
-### Аутентификация
-| ID | Сценарий | Статус |
-|----|----------|--------|
-| E-01 | Регистрация нового пользователя | ⬜ |
-| E-02 | Вход с валидными данными | ⬜ |
-| E-03 | Вход с невалидными данными | ⬜ |
-| E-04 | Выход из системы | ⬜ |
-| E-05 | Восстановление пароля | ⬜ |
-| E-06 | Редирект неавторизованного пользователя | ⬜ |
-
-### Управление участками
-| ID | Сценарий | Статус |
-|----|----------|--------|
-| E-10 | Создание участка | ⬜ |
-| E-11 | Валидация формы создания | ⬜ |
-| E-12 | Редактирование участка | ⬜ |
-| E-13 | Удаление участка с подтверждением | ⬜ |
-| E-14 | Поиск по номеру участка | ⬜ |
-| E-15 | Фильтрация по кадастровому номеру | ⬜ |
-| E-16 | Пагинация списка участков | ⬜ |
-| E-17 | Отображение пустого списка | ⬜ |
-
-### Управление участниками
-| ID | Сценарий | Статус |
-|----|----------|--------|
-| E-20 | Создание связи участка и участника | ⬜ |
-| E-21 | Валидация формы создания связи | ⬜ |
-| E-22 | Фильтрация по участку | ⬜ |
-| E-23 | Фильтрация по статусу | ⬜ |
-| E-24 | Поиск по имени участника | ⬜ |
-| E-25 | Деактивация участника | ⬜ |
-| E-26 | Удаление связи | ⬜ |
-| E-27 | Пагинация списка участников | ⬜ |
-
-### Профиль пользователя
-| ID | Сценарий | Статус |
-|----|----------|--------|
-| E-30 | Редактирование имени/фамилии | ⬜ |
-| E-31 | Смена темы | ⬜ |
-| E-32 | Загрузка аватара | ⬜ |
-| E-33 | Удаление аватара | ⬜ |
-| E-34 | Валидация данных профиля | ⬜ |
-
-### Навигация и доступ
-| ID | Сценарий | Статус |
-|----|----------|--------|
-| E-40 | Переход между разделами | ⬜ |
-| E-41 | Доступ к страницам по ролям | ⬜ |
-| E-42 | Редирект с защищённой страницы | ⬜ |
-| E-43 | Обработка 404 страницы | ⬜ |
-| E-44 | Адаптивность мобильного меню | ⬜ |
-
----
-
 ## 6. Запуск E2E-тестов
 
-### Команды
+### Команды (через npm scripts)
 
 ```bash
-# Запуск всех E2E-тестов
-npx playwright test e2e
-
-# Запуск в headless режиме (для CI)
-npx playwright test e2e --project=chromium
+# Запуск всех E2E-тестов (3 браузера)
+npm run test:e2e
 
 # Запуск в headed режиме для отладки
-npx playwright test e2e --headed --project=chromium
+npm run test:e2e:headed
 
 # Запуск конкретного теста
-npx playwright test e2e/auth.spec.ts
+npx playwright test auth/change-password.e2e.spec.ts --project=chromium
 
-# Запуск с сохранением видео при ошибке
-npx playwright test e2e --debug
+# Запуск одного файла в headed режиме
+npx playwright test auth/change-password.e2e.spec.ts --headed --project=chromium
 
-# Открытие Trace Viewer
-npx playwright show-trace test-results/*/trace.zip
+# Запуск с UI-режимом (Playwright Inspector)
+npx playwright test --ui --project=chromium
 
-# Генерация отчёта
+# Открытие отчёта
 npx playwright show-report
+
+# Открытие Trace Viewer для упавшего теста
+npx playwright show-trace test-results/*/trace.zip
 ```
 
 ### CI/CD интеграция
@@ -625,6 +617,107 @@ flowchart LR
 
 ---
 
-**Последнее обновление:** 2026-07-05  
-**Статус:** Создано  
+**Последнее обновление:** 2026-07-27
+**Статус:** Актуализировано (B-011)
 **Приоритет реализации:** Последний этап тестовой пирамиды
+
+---
+
+## 12. Карта покрытия E2E-тестами (актуализация 2026-07-27)
+
+> **Общее количество:** 1170 тестов в 32 файлах × 3 браузера (chromium, firefox, webkit)
+> **Авторизация:** `loginAsMember()` / `loginAsAdmin()` через `tests/e2e/shared/test-helpers.ts`
+
+### 12.1 AUTH (B-001, B-015)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Вход (US-04, US-05) | `auth/login.e2e.spec.ts` | ✅ |
+| Регистрация (US-06, US-07) | `auth/register.e2e.spec.ts` | ✅ |
+| Ошибки аутентификации (US-11) | `auth/auth-errors.e2e.spec.ts` | ✅ |
+| Callback URL | `auth/callback-url.spec.ts` | ✅ |
+| Landing redirect | `auth/landing-redirect.e2e.spec.ts` | ✅ |
+| **Смена пароля (US-12, B-015)** | `auth/change-password.e2e.spec.ts` | ✅ **НОВЫЙ** |
+
+### 12.2 ROLES (B-002)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Role Guard (US-03) | `roles/role-guard.e2e.spec.ts` | ✅ |
+| CRUD ролей | `roles/roles-crud.e2e.spec.ts` | ✅ |
+
+### 12.3 PLOTS (B-003)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Карточка участка (US-17) | `plots/plot-card-view.e2e.spec.ts` | ✅ |
+| Создание (US-14) | `plots/plot-creation.e2e.spec.ts` | ✅ |
+| Удаление (US-16) | `plots/plot-deletion.e2e.spec.ts` | ✅ |
+| Редактирование (US-15) | `plots/plot-editing.e2e.spec.ts` | ✅ |
+| Список участков | `plots/plot-list.e2e.spec.ts` | ✅ |
+| Поиск (US-18) | `plots/plot-search.e2e.spec.ts` | ✅ |
+
+### 12.4 PROFILE (B-005)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Профиль (US-19-01..06) | `profile/profile.e2e.spec.ts` | ✅ |
+
+### 12.5 USERS (B-006)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Пользователи (US-20-01..04) | `users/users.e2e.spec.ts` | ✅ |
+
+### 12.6 COMMS (B-007)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Навигация по вкладкам (US-21-36) | `comms/comms-tabs.e2e.spec.ts` | ✅ |
+| Список диалогов (US-21-01) | `comms/conversations-list.e2e.spec.ts` | ✅ |
+| Новый диалог (US-21-02) | `comms/new-conversation.e2e.spec.ts` | ✅ |
+| Групповые чаты (US-21-04..06) | `chats/chats.e2e.spec.ts` | ✅ |
+| Объявления (US-21-27..29) | `announcements/announcements.e2e.spec.ts` | ✅ |
+| Отправка сообщений (US-21-03) | — | ⛔ **Блокировано** — UI не реализован |
+| История сообщений (US-21-03-02) | — | ⛔ **Блокировано** — UI не реализован |
+| Модерация (US-21-19..26) | — | ⛔ **Блокировано** — модели БД отсутствуют |
+| Категории чатов (US-21-11..14) | — | ⛔ **Блокировано** — модели БД отсутствуют |
+| Персональные папки (US-21-15..18) | — | ⛔ **Блокировано** — модели БД отсутствуют |
+| Публикация/архивация объявлений (US-21-30..33) | — | ⛔ **Блокировано** — частичная реализация |
+| Уведомления (US-21-34..35) | — | ⛔ **Блокировано** — не реализовано |
+
+### 12.7 DOCS (B-008)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Категории документов (US-22-01..02) | `documents/documents-categories.e2e.spec.ts` | ✅ |
+| Загрузка документов (US-22-03..04) | `documents/documents-upload.e2e.spec.ts` | ✅ |
+| Список документов (US-22-05) | `documents/documents-list.e2e.spec.ts` | ✅ |
+| Детали документа (US-22-06) | `documents/documents-detail.e2e.spec.ts` | ✅ |
+| Редактирование документа (US-22-07) | `documents/documents-edit.e2e.spec.ts` | ✅ |
+
+### 12.8 NAV (B-009)
+
+| Сценарий | Файл | Статус |
+|----------|------|--------|
+| Страница 404 (US-NAV-03) | `navigation/404.e2e.spec.ts` | ✅ |
+| Хлебные крошки (US-NAV-06) | `navigation/breadcrumbs.e2e.spec.ts` | ✅ |
+| Мобильное меню (US-NAV-07) | `navigation/mobile-menu.e2e.spec.ts` | ✅ |
+| Редиректы (US-NAV-01) | `navigation/redirects.e2e.spec.ts` | ✅ |
+| Боковое меню (US-NAV-05) | `navigation/sidebar.e2e.spec.ts` | ✅ |
+
+### 12.9 Итоговая сводка
+
+| Домен | Всего сценариев | ✅ Покрыто | ⛔ Блокировано | Покрытие |
+|-------|----------------|------------|----------------|----------|
+| AUTH | 6 | 6 | 0 | 100% |
+| ROLES | 2 | 2 | 0 | 100% |
+| PLOTS | 6 | 6 | 0 | 100% |
+| PROFILE | 1 | 1 | 0 | 100% |
+| USERS | 1 | 1 | 0 | 100% |
+| COMMS | 15 | 5 | 10 | 33% |
+| DOCS | 5 | 5 | 0 | 100% |
+| NAV | 5 | 5 | 0 | 100% |
+| **ИТОГО** | **41** | **31** | **10** | **76%** |
+
+> **Примечание:** Блокированные сценарии COMMS связаны с отсутствием UI (`src/app/comms/` — пустая директория) и моделей БД (согласно [`docs/tests/comms-test-audit.md`](comms-test-audit.md)). После реализации B-014 remediation — требуется актуализация E2E-покрытия.

@@ -11,7 +11,7 @@
  * @see docs/model/entities/conversation.md
  * @see docs/model/entities/message.md
  */
-import type { ChatListItem, ChatListResponse, ChatParticipantListItem, ChatParticipantsListResponse, Conversation, ConversationParticipant, ConversationListResponse, CreateChatData, Message, ParticipantRole, UpdateChatData } from './comms.types';
+import type { ChatListResponse, ChatParticipantListItem, ChatParticipantsListResponse, Conversation, ConversationParticipant, ConversationListResponse, CreateChatData, Message, MessageWithReadStatus, ParticipantRole, UpdateChatData, UnreadCounts } from './comms.types';
 
 /**
  * Данные для создания сообщения
@@ -98,7 +98,23 @@ export interface ICommsRepository {
  isParticipant(conversationId: string, userId: string): Promise<boolean>;
 
  /**
-  * Найти личный диалог между двумя пользователями
+  * Проверить существование пользователя по ID
+  *
+  * @param userId - ID пользователя
+  * @returns true если пользователь существует
+  *
+  * @spec
+  * - Проверяет наличие записи в user
+  * - Возвращает false если пользователь не найден (НЕ бросает ошибку)
+  *
+  * @b030 B-030: используется в startConversation для валидации существования
+  * собеседника (participantId) ДО createConversation, чтобы несуществующий
+  * участник давал 4xx, а не падал с P2003 (внешний ключ) → 200.
+  */
+ userExists(userId: string): Promise<boolean>;
+
+ /**
+  * Найти личный (DIRECT) диалог между двумя пользователями
   *
   * @param userAId - ID первого пользователя
   * @param userBId - ID второго пользователя
@@ -106,8 +122,12 @@ export interface ICommsRepository {
   *
   * @spec
   * - Ищет диалог типа DIRECT, где участниками являются оба пользователя
-  * - Порядок userA/userB не важен
+  * - Порядок userA/userB не важен (A,B = B,A)
   * - Возвращает null если диалог не найден (НЕ бросает ошибку)
+  *
+  * @b029 B-029 T2-1 (P2-3): оптимизирован — один SQL-запрос вместо N+1 цикла.
+  *
+  * @traces AC-04 (REQ-COMMS-004)
   */
  findConversationBetween(userAId: string, userBId: string): Promise<Conversation | null>;
 
@@ -126,6 +146,15 @@ export interface ICommsRepository {
   * - Первый участник получает роль OWNER
   * - Остальные получают роль MEMBER
   * - Выполняется в транзакции
+  *
+  * @b029 B-029 T2-1 (BR-06, NFR-03):
+  * - Для DIRECT вычисляется pairKey = sorted(participantIds).join('|') и
+  *   сохраняется на диалоге → partial unique index предотвращает дубликаты.
+  * - При P2002 (race condition) бросает DuplicateConversationError(existingId).
+  *
+  * @throws {DuplicateConversationError} при race condition (P2002 на pair_key)
+  *
+  * @traces AC-03 (REQ-COMMS-004)
   */
  createConversation(
    type: 'DIRECT',
@@ -375,4 +404,66 @@ export interface ICommsRepository {
     chatId: string,
     userId: string
   ): Promise<ChatParticipantListItem | null>;
+
+ /**
+  * Отметить все сообщения в диалоге как прочитанные для пользователя
+  *
+  * @param conversationId - ID диалога
+  * @param userId - ID пользователя
+  * @throws {ParticipantNotFoundError} если пользователь не является участником диалога
+  *
+  * @spec
+  * - Проверка существования participant (conversationId, userId)
+  * - UPDATE conversation_participants SET last_read_at = now()
+  * - Идемпотентно: повторный вызов не выбрасывает ошибку (AC-4)
+  * - Если participant не найден — бросает ParticipantNotFoundError (404)
+  *
+  * @traces US-39-01 AC-1, AC-2, AC-4
+  * @task B-026-T2-1
+  *
+  * @see component-spec.md → 3.1.4
+  */
+ markAsRead(conversationId: string, userId: string): Promise<void>;
+
+ /**
+  * Получить сообщения диалога со статусом прочтения
+  *
+  * @param conversationId - ID диалога
+  * @param userId - ID текущего пользователя
+  * @returns Массив сообщений с полями статуса прочтения, отсортированный по createdAt ASC
+  *
+  * @spec
+  * - Для DIRECT: isReadByRecipient = recipient.lastReadAt >= message.createdAt
+  *   (recipient — единственный participant с userId != senderId)
+  * - Для GROUP: readByCount = COUNT(participants WHERE lastReadAt >= createdAt AND userId != senderId)
+  * - Для GROUP: totalParticipants = COUNT(participants WHERE userId != senderId)
+  * - Фильтр is_deleted = false
+  * - Сортировка по createdAt ASC
+  * - Включает данные отправителя (senderName, senderEmail, senderAvatarUrl)
+  *
+  * @traces US-39-02 AC-1, AC-2, AC-3, AC-6
+  * @task B-026-T2-1
+  *
+  * @see component-spec.md → 3.1.4
+  */
+ getMessagesWithReadStatus(
+   conversationId: string,
+   userId: string
+ ): Promise<MessageWithReadStatus[]>;
+
+ /**
+  * Подсчитать непрочитанные сообщения по категориям
+  *
+  * @param userId - ID текущего пользователя
+  * @returns Счётчики непрочитанных по категориям
+  *
+  * @covers AC-6 (US-21-37): API /api/v1/comms/unread-counts
+  * @see component-spec.md → 3.1.2
+  *
+  * @spec
+  * - messages: сумма непрочитанных в DIRECT диалогах
+  * - chats: сумма непрочитанных в GROUP чатах
+  * - lastReadAt < message.createdAt && senderId !== userId
+  */
+ getUnreadCounts(userId: string): Promise<UnreadCounts>;
 }

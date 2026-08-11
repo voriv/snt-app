@@ -24,6 +24,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Badge } from '@/components/ui/Badge';
 
 /**
  * @type UserSearchResult
@@ -143,7 +147,7 @@ export function ParticipantSelector({
    * Обработчик изменения поискового запроса с debounce
    */
   const handleQueryChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const value = e.target.value;
       setQuery(value);
 
@@ -216,37 +220,38 @@ export function ParticipantSelector({
       {/* Выбранные участники — теги */}
       {selectedUsers.length > 0 && (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[var(--theme-text-primary)] mb-2">
             Выбранные участники ({selectedUsers.length})
           </label>
           <div className="flex flex-wrap gap-2">
             {selectedUsers.map((user) => (
-              <span
-                key={user.id}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-700"
-              >
-                {user.name}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSelected(user.id)}
-                  className="ml-1 text-indigo-400 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                  aria-label={`Удалить ${user.name} из участников`}
-                  disabled={isDisabled}
-                >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
+              <span key={user.id} className="inline-flex items-center gap-1">
+                <Badge variant="info">
+                  {user.name}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => handleRemoveSelected(user.id)}
+                    className="ml-1 !p-0 h-auto"
+                    aria-label={`Удалить ${user.name} из участников`}
+                    disabled={isDisabled}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </Button>
+                </Badge>
               </span>
             ))}
           </div>
@@ -257,18 +262,17 @@ export function ParticipantSelector({
       <div className="mb-4">
         <label
           htmlFor="participant-search"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-[var(--theme-text-primary)] mb-1"
         >
           Добавить участников
         </label>
-        <input
+        <Input
           id="participant-search"
           type="text"
           value={query}
           onChange={handleQueryChange}
           onKeyDown={handleKeyDown}
           placeholder="Введите имя или email..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           disabled={isDisabled}
           aria-autocomplete="list"
           aria-expanded={users.length > 0}
@@ -279,17 +283,14 @@ export function ParticipantSelector({
       </div>
 
       {/* Ошибка */}
-      {error && (
-        <div className="text-sm text-red-600 mb-4" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <ErrorMessage message={error} />}
 
       {/* Индикатор загрузки */}
       {isSearching && (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-8" role="status" aria-live="polite">
           <svg
-            className="animate-spin h-8 w-8 text-indigo-600"
+            className="animate-spin h-8 w-8 text-[var(--theme-accent)]"
+            aria-hidden="true"
             xmlns="http://www.w.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -314,9 +315,9 @@ export function ParticipantSelector({
       {/* Пустые состояния */}
       {!isSearching && hasSearched && users.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--theme-bg-secondary)]">
             <svg
-              className="h-8 w-8 text-gray-400"
+              className="h-8 w-8 text-[var(--theme-text-secondary)]"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
@@ -329,10 +330,10 @@ export function ParticipantSelector({
               />
             </svg>
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900">
+          <h3 className="mt-4 text-lg font-semibold text-[var(--theme-text-primary)]">
             Пользователь не найден
           </h3>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-[var(--theme-text-secondary)]">
             Попробуйте изменить поисковый запрос
           </p>
         </div>
@@ -340,9 +341,9 @@ export function ParticipantSelector({
 
       {!hasSearched && !isSearching && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--theme-bg-secondary)]">
             <svg
-              className="h-8 w-8 text-gray-400"
+              className="h-8 w-8 text-[var(--theme-text-secondary)]"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
@@ -355,10 +356,10 @@ export function ParticipantSelector({
               />
             </svg>
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900">
+          <h3 className="mt-4 text-lg font-semibold text-[var(--theme-text-primary)]">
             Начните вводить имя или email
           </h3>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-[var(--theme-text-secondary)]">
             Минимум 2 символа для поиска
           </p>
         </div>
@@ -376,8 +377,8 @@ export function ParticipantSelector({
               tabIndex={-1}
               className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
                 index === highlightedIndex
-                  ? 'bg-indigo-50'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-[var(--theme-bg-secondary)]'
+                  : 'hover:bg-[var(--theme-bg-secondary)]'
               }`}
               onClick={() => handleToggleUser(user.id)}
               onKeyDown={(e) => {
@@ -392,8 +393,8 @@ export function ParticipantSelector({
                 <div
                   className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
                     selectedIds.includes(user.id)
-                      ? 'bg-indigo-600 border-indigo-600'
-                      : 'border-gray-300'
+                      ? 'bg-[var(--theme-accent)] border-[var(--theme-accent)]'
+                      : 'border-[var(--theme-input-border)]'
                   }`}
                 >
                   {selectedIds.includes(user.id) && (
@@ -423,8 +424,8 @@ export function ParticipantSelector({
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <span className="text-indigo-600 font-medium text-sm">
+                  <div className="h-10 w-10 rounded-full bg-[var(--theme-bg-secondary)] flex items-center justify-center">
+                    <span className="text-[var(--theme-text-secondary)] font-medium text-sm">
                       {user.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -433,10 +434,10 @@ export function ParticipantSelector({
 
               {/* Информация о пользователе */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-[var(--theme-text-primary)] truncate">
                   {user.name}
                 </p>
-                <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                <p className="text-sm text-[var(--theme-text-secondary)] truncate">{user.email}</p>
               </div>
             </li>
           ))}

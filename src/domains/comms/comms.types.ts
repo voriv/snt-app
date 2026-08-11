@@ -100,6 +100,12 @@ export interface Message {
   conversationId: string;
   /** ID отправителя */
   senderId: string;
+  /** Имя отправителя (firstName + lastName). Заполняется в репозитории. Опционально для UI */
+  senderName?: string;
+  /** Email отправителя. Заполняется в репозитории. Используется как fallback для отображения */
+  senderEmail?: string;
+  /** URL аватара отправителя. Заполняется в репозитории */
+  senderAvatarUrl?: string | null;
   /** Текст сообщения */
   content: string;
   /** ID цитируемого сообщения */
@@ -114,6 +120,62 @@ export interface Message {
   createdAt: Date | string;
   /** Дата последнего редактирования (string для JSON API, Date для Prisma) */
   updatedAt: Date | string;
+}
+
+/**
+ * @type MessageWithReadStatus
+ * @domain comms
+ * @description Сообщение с информацией о статусе прочтения
+ *
+ * @spec
+ * - Для DIRECT: isReadByRecipient — прочитал ли собеседник
+ * - Для GROUP: readByCount — количество прочитавших, totalParticipants — общее число получателей кроме автора
+ * - isReadByRecipient вычисляется как participant.lastReadAt >= message.createdAt
+ * - readByCount = COUNT(participants WHERE lastReadAt >= createdAt AND userId != senderId)
+ * - totalParticipants = COUNT(participants WHERE userId != senderId)
+ * - Автор исключён из totalParticipants (BR-07)
+ *
+ * @traces US-39-02 AC-1, AC-2, AC-3, AC-6
+ * @task B-026-T1-1
+ *
+ * @see docs/user-stories/US-39-02-read-receipts.md
+ */
+export interface MessageWithReadStatus {
+  /** Уникальный идентификатор сообщения */
+  id: string;
+  /** ID диалога */
+  conversationId: string;
+  /** ID отправителя */
+  senderId: string;
+  /** Имя отправителя (firstName + lastName). Заполняется в репозитории */
+  senderName?: string;
+  /** Email отправителя. Заполняется в репозитории */
+  senderEmail?: string;
+  /** URL аватара отправителя. Заполняется в репозитории */
+  senderAvatarUrl?: string | null;
+  /** Текст сообщения */
+  content: string;
+  /** ID цитируемого сообщения */
+  replyToId: string | null;
+  /** Флаг мягкого удаления */
+  isDeleted: boolean;
+  /** ID пользователя, удалившего сообщение */
+  deletedBy: string | null;
+  /** Время мягкого удаления */
+  deletedAt: Date | null;
+  /** Дата отправки (string для JSON API, Date для Prisma) */
+  createdAt: Date | string;
+  /** Дата последнего редактирования (string для JSON API, Date для Prisma) */
+  updatedAt: Date | string;
+  /**
+   * Сообщение прочитано получателем (для DIRECT).
+   * Всегда определён для DIRECT и GROUP (для GROUP = readByCount > 0).
+   */
+  isReadByRecipient: boolean;
+  /** Количество прочитавших (для GROUP) */
+  readByCount?: number;
+  /** Общее число получателей кроме автора (для GROUP) */
+  totalParticipants?: number;
 }
 
 /**
@@ -472,4 +534,20 @@ export interface ChatParticipantsListResponse {
 export interface ChatParticipantAddRequest {
   /** ID пользователя для добавления */
   userId: string;
+}
+
+/**
+ * @type UnreadCounts
+ * @domain comms
+ * @description Счётчики непрочитанных сообщений по категориям
+ *
+ * @covers AC-1 (US-21-37): messages — непрочитанные в личных диалогах
+ * @covers AC-2 (US-21-37): chats — непрочитанные в групповых чатах
+ * @see component-spec.md → 3.1.1
+ */
+export interface UnreadCounts {
+  /** Количество непрочитанных сообщений в личных диалогах (DIRECT) */
+  messages: number;
+  /** Количество непрочитанных сообщений в групповых чатах (GROUP) */
+  chats: number;
 }

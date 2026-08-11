@@ -168,6 +168,13 @@ export class PlotService {
    * - Пустые/пробельные значения фильтров игнорируются
    */
   async search(filters: PlotSearchFilters): Promise<Plot[]> {
+    const { number, cadastral, note } = filters;
+    const hasFilters = [number, cadastral, note].some(
+      (v) => v !== undefined && v !== null && v.trim() !== ''
+    );
+    if (!hasFilters) {
+      return [];
+    }
     return this.plotRepository.search(filters);
   }
 

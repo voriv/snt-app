@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { MessageWithSender } from '@/domains/comms/message.types';
 import { ConversationMessagesList } from '@/components/features/comms/ConversationMessagesList';
 import { MessageInput } from '@/components/features/comms/MessageInput';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { ChatLayout } from '@/components/features/comms/ChatLayout';
+import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 /**
  * @component ConversationDetailPage
@@ -34,9 +36,6 @@ export interface ConversationDetailPageProps {
   conversationTitle?: string;
 }
 
-const GetMessagesApiResponse = <T extends { data: unknown }>(data: T): T => data;
-const CreateMessageApiResponse = <T extends { data: unknown }>(data: T): T => data;
-
 export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
   conversationId,
   currentUserId,
@@ -50,6 +49,10 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
   const [hasMore, setHasMore] = useState(false);
   const [lastMessageId, setLastMessageId] = useState<string | undefined>(undefined);
 
+  // Реф для отслеживания текущих сообщений без триггера ре-рендера
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   // Загрузка сообщений
   const loadMessages = useCallback(
     async (limit = 50, beforeId?: string) => {
@@ -57,27 +60,19 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
         setIsLoading(true);
         setError(null);
 
-        const queryParams: Record<string, string | number | null> = {
-          conversationId,
-          limit,
-        };
-
-        if (beforeId) {
-          queryParams.beforeId = beforeId;
-        }
-
-        const response = await apiClient.getWithQuery<{ data: MessageWithSender[] }>(
-          '/conversations/messages',
-          queryParams
+        const response = await apiClient.getWithQuery<MessageWithSender[]>(
+          `/conversations/${encodeURIComponent(conversationId)}/messages`,
+          { limit, beforeId: beforeId || undefined }
         );
 
-        const messagesData = response.data?.data || [];
+        const messagesData = Array.isArray(response.data) ? response.data : [];
+        const currentMessages = messagesRef.current;
         const newMessages = beforeId
-          ? [...messagesData, ...messages]
+          ? [...messagesData, ...currentMessages]
           : messagesData;
         setMessages(newMessages);
         setHasMore(messagesData.length === limit && !!beforeId);
-        
+
         // Устанавливаем ID последнего сообщения для автопрокрутки
         if (!beforeId && messagesData.length > 0) {
           setLastMessageId(messagesData[messagesData.length - 1].id);
@@ -89,7 +84,7 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
         setIsLoading(false);
       }
     },
-    [conversationId, messages]
+    [conversationId]
   );
 
   useEffect(() => {
@@ -105,12 +100,12 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
 
         const body: Record<string, unknown> = { content };
 
-        const response = await apiClient.post<{ data: MessageWithSender }>(
-          '/conversations/messages',
+        const response = await apiClient.post<MessageWithSender>(
+          `/conversations/${encodeURIComponent(conversationId)}/messages`,
           body
         );
 
-        const newMessage = response.data?.data;
+        const newMessage = response.data;
         if (newMessage) {
           // Добавляем новое сообщение в конец списка
           setMessages((prev) => [...prev, newMessage]);
@@ -132,7 +127,7 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
   const handleDelete = useCallback(
     async (messageId: string) => {
       try {
-        await apiClient.delete(`/conversations/messages/${messageId}`);
+        await apiClient.delete(`/messages/${encodeURIComponent(messageId)}`);
         // Удаляем сообщение из списка
         setMessages((prev) => prev.filter((m) => m.id !== messageId));
       } catch (err) {
@@ -144,45 +139,15 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
 
   // Обработчик загрузки дополнительных сообщений
   const handleLoadMore = useCallback(() => {
-    if (messages.length > 0 && !isLoading) {
-      const lastMessage = messages[0];
+    const currentMessages = messagesRef.current;
+    if (currentMessages.length > 0 && !isLoading) {
+      const lastMessage = currentMessages[0];
       loadMessages(50, lastMessage.id);
     }
-  }, [messages, isLoading, loadMessages]);
+  }, [isLoading, loadMessages]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-      {/* Заголовок */}
-      <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Вернуться к списку диалогов"
-          >
-            <svg
-              className="w-5 h-5 text-gray-600 dark:text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <h2 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-              {conversationTitle}
-            </h2>
-          </div>
-        </div>
-      </div>
-
+    <ChatLayout title={conversationTitle} onBack={onBack}>
       {/* Список сообщений */}
       <ConversationMessagesList
         messages={messages}
@@ -191,20 +156,16 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
         hasMore={hasMore}
         onLoadMore={handleLoadMore}
         lastMessageId={lastMessageId}
+        onDelete={handleDelete}
       />
 
       {/* Индикатор ошибки */}
       {error && (
-        <div className="flex-shrink-0 px-4 py-3 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-red-700 dark:text-red-400">{error.message}</p>
-            <button
-              onClick={() => loadMessages()}
-              className="px-3 py-1 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            >
-              Повторить
-            </button>
-          </div>
+        <div className="flex-shrink-0 flex flex-col gap-3 px-4 py-3">
+          <ErrorMessage message={error?.message ?? ''} />
+          <Button variant="ghost" size="sm" type="button" onClick={() => loadMessages()}>
+            Повторить
+          </Button>
         </div>
       )}
 
@@ -214,6 +175,6 @@ export const ConversationDetailPage: React.FC<ConversationDetailPageProps> = ({
         isLoading={isSending}
         disabled={error !== null}
       />
-    </div>
+    </ChatLayout>
   );
 };

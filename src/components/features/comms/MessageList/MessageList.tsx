@@ -59,7 +59,7 @@ export function MessageList({
       <EmptyState
         icon={
           <svg
-            className="w-12 h-12 text-gray-400"
+            className="w-12 h-12 text-[var(--theme-text-secondary)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

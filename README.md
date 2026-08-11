@@ -130,6 +130,94 @@ npm run domain:create members member
 
 - [План настройки проекта](plans/workspace-setup-plan.md)
 - [Правила архитектуры](.roo/rules/architecture.md)
+- [План развертывания](plans/deployment-plan.md)
+
+## 🚀 Развертывание
+
+### Требования
+
+- **Node.js** 24+
+- **PostgreSQL** 15+
+- **npm** или **pnpm**
+
+### Варианты развертывания
+
+#### 1. Локальная разработка (быстрый старт)
+
+```bash
+# Клонирование репозитория
+git clone <repo-url>
+cd snt-app
+
+# Установка зависимостей
+npm ci
+
+# Настройка окружения
+cp .env.example .env
+# Отредактируйте .env
+
+# Настройка базы данных
+npm run db:generate
+npm run db:push
+
+# Запуск сервера разработки
+npm run dev
+```
+
+#### 2. Локальная разработка через Docker
+
+```bash
+# Запуск приложения и БД
+docker-compose up -d
+
+# Приложение доступно по http://localhost:3000
+```
+
+#### 3. Продакшен через Docker Compose
+
+```bash
+# Создание .env файла
+cp .env.example .env
+# Отредактируйте .env с реальными значениями
+
+# Запуск продакшена
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+#### 4. Автоматическое развертывание
+
+**Windows:**
+```powershell
+# Запуск от имени администратора
+.\scripts\deploy-windows.ps1
+```
+
+**Ubuntu:**
+```bash
+# Запуск с правами sudo
+sudo ./scripts/deploy-ubuntu.sh
+```
+
+### Переменные окружения
+
+| Переменная | Описание | Пример |
+|------------|----------|--------|
+| `DATABASE_URL` | URL базы данных | `postgresql://user:pass@localhost:5432/snt_db` |
+| `NEXTAUTH_URL` | URL приложения | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | Секрет для сессий | Случайная строка |
+| `WS_PORT` | Порт WebSocket | `3001` |
+| `WS_INTERNAL_SECRET` | Секрет для WebSocket | Случайная строка |
+
+### CI/CD
+
+Проект использует GitHub Actions для автоматического тестирования и сборки:
+
+- **Lint & Type Check** — проверка кода
+- **Unit тесты** — Vitest
+- **Integration тесты** — с тестовой БД
+- **Component тесты** — React компоненты
+- **E2E тесты** — Playwright
+- **Docker сборка** — при мерже в main
 
 ## 🛠️ Технологии
 
@@ -140,8 +228,9 @@ npm run domain:create members member
 - **Валидация:** Zod
 - **Аутентификация:** NextAuth.js
 - **CSS:** Tailwind CSS
-- **Тестирование:** Jest
-- **Сборка:** pnpm/npm
+- **Тестирование:** Vitest + Playwright
+- **Контейнеризация:** Docker + Docker Compose
+- **CI/CD:** GitHub Actions
 
 ## 📝 Лицензия
 

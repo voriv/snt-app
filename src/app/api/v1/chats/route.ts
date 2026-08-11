@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getContainer } from '@/di/container';
 import { auth } from '@/lib/auth';
 import type { BaseError } from '@/shared/errors';
+import { ZodError } from 'zod';
 
 /**
  * @route GET /api/v1/chats
@@ -95,6 +96,13 @@ export async function POST(request: NextRequest) {
 }
 
 function errorResponse(error: unknown): NextResponse {
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { success: false, error: { code: 'VALIDATION_ERROR', message: 'Ошибка валидации данных' } },
+      { status: 400 }
+    );
+  }
+
   if (error instanceof Error && 'code' in error) {
     const baseError = error as BaseError;
     return NextResponse.json(

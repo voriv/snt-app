@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { cn } from '@/shared/utils/cn';
 
 /**
@@ -56,7 +58,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }, []);
 
   // Обработчик изменения текста
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setMessage(e.target.value);
     adjustHeight();
   }, [adjustHeight]);
@@ -77,7 +79,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }, [message, isLoading, disabled, onSendMessage]);
 
   // Обработчик нажатия клавиш
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -85,9 +87,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }, [handleSubmit]);
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+    <div className="flex-shrink-0 border-t border-[var(--theme-border-color)] bg-[var(--theme-bg-primary)] px-4 py-3">
       <div className="flex gap-2 max-w-4xl mx-auto">
-        <textarea
+        <Input
+          as="textarea"
           ref={textareaRef}
           value={message}
           onChange={handleChange}
@@ -95,32 +98,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           placeholder="Напишите сообщение..."
           disabled={isLoading || disabled}
           rows={1}
-          className={cn(
-            'flex-1 resize-none px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600',
-            'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100',
-            'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
-            'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed',
-            'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-            'text-sm leading-relaxed'
-          )}
+          autoResize
+          className={cn('flex-1 resize-none text-sm leading-relaxed')}
           style={{ maxHeight: '200px' }}
           aria-label="Поле ввода сообщения"
         />
-        
-        <button
+
+        <Button
+          variant="primary"
+          size="md"
           type="button"
           onClick={handleSubmit}
           disabled={!message.trim() || isLoading || disabled}
-          className={cn(
-            'flex items-center justify-center px-4 py-2 rounded-lg',
-            'transition-colors duration-200',
-            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
         >
           {isLoading ? (
             <svg
-              className="w-5 h-5 animate-spin text-gray-500"
+              className="w-5 h-5 animate-spin"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -134,7 +127,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             </svg>
           ) : (
             <svg
-              className="w-5 h-5 text-white"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -147,13 +140,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               />
             </svg>
           )}
-        </button>
+        </Button>
       </div>
       
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-        Нажмите <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> для отправки,{' '}
-        <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Shift</kbd> +{' '}
-        <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> для новой строки
+      <p className="text-xs text-[var(--theme-text-secondary)] mt-2 text-center">
+        Нажмите <kbd className="px-1 py-0.5 bg-[var(--theme-bg-secondary)] rounded text-xs">Enter</kbd> для отправки,{' '}
+        <kbd className="px-1 py-0.5 bg-[var(--theme-bg-secondary)] rounded text-xs">Shift</kbd> +{' '}
+        <kbd className="px-1 py-0.5 bg-[var(--theme-bg-secondary)] rounded text-xs">Enter</kbd> для новой строки
       </p>
     </div>
   );

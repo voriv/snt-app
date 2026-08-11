@@ -28,6 +28,9 @@
 
 import { useCallback, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import type { Conversation } from '@/domains/comms/comms.types';
 
 export interface EditChatFormProps {
@@ -103,122 +106,69 @@ export function EditChatForm({
   );
 
   const handleNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setName(e.target.value);
     },
     []
   );
 
   const handleDescriptionChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setDescription(e.target.value);
     },
     []
   );
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-[var(--theme-bg-primary)] rounded-lg shadow p-6 space-y-6">
       {/* Error state */}
-      {error && (
-        <div
-          role="alert"
-          className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800"
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorMessage message={error} />}
 
       {/* Название чата */}
       <div>
-        <label
-          htmlFor="chat-name"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Название чата <span className="text-red-500">*</span>
-        </label>
-        <input
+        <Input
           id="chat-name"
+          label="Название чата"
           type="text"
           value={name}
           onChange={handleNameChange}
           placeholder="Введите название чата"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           maxLength={100}
           disabled={isSaving}
           required
           aria-required="true"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-[var(--theme-text-secondary)]">
           От 2 до 100 символов
         </p>
       </div>
 
       {/* Описание чата */}
       <div>
-        <label
-          htmlFor="chat-description"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Описание
-        </label>
-        <textarea
+        <Input
           id="chat-description"
+          as="textarea"
+          label="Описание"
           value={description}
           onChange={handleDescriptionChange}
           placeholder="Опишите цель чата (необязательно)"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           rows={3}
           maxLength={500}
           disabled={isSaving}
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-[var(--theme-text-secondary)]">
           {description.length}/500 символов
         </p>
       </div>
 
       {/* Кнопки */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isSaving}
-        >
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--theme-border-color)]">
+        <Button variant="secondary" type="button" onClick={onCancel} disabled={isSaving}>
           Отмена
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <span className="flex items-center gap-2">
-              <svg
-                className="animate-spin h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              Сохранение...
-            </span>
-          ) : (
-            'Сохранить'
-          )}
-        </button>
+        </Button>
+        <Button variant="primary" type="submit" isLoading={isSaving}>
+          {isSaving ? 'Сохранение...' : 'Сохранить'}
+        </Button>
       </div>
     </form>
   );

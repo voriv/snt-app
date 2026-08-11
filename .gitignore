@@ -6,6 +6,10 @@ node_modules/
 # Testing
 /coverage
 
+# Playwright
+/playwright-report/
+/test-results/
+
 # Next.js
 /.next/
 /out/
@@ -50,3 +54,10 @@ prisma/migrations/
 Thumbs.db
 node_modules
 prompts
+public/uploads
+archive
+docs/debug
+docs/plans
+docs/reviews
+docs/tests
+temp/todo
